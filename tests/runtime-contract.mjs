@@ -60,9 +60,11 @@ expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
 expect(index, /createFounderNotice/, 'Founder attention/approval path');
 expect(ui, /founder/i, 'Founder Inbox UI surface');
+expect(ui, /nextDelay\(\)/, 'adaptive live polling');
+expect(ui, /data-read/, 'Founder Inbox read hygiene');
 expect(wrangler, /workers_dev = false/, 'workers.dev disabled');
 expect(wrangler, /preview_urls = false/, 'preview URLs disabled');
 expect(wrangler, /ops\.getinspiration\.com/, 'ops custom domain');
-expect(wrangler, /REPLACE_WITH_COMPANY_OS_D1_ID/, 'production D1 requires explicit activation');
+expect(wrangler, /00000000-0000-0000-0000-000000000000/, 'production D1 requires explicit activation');
 
 console.log('Company OS runtime contract checks passed.');
