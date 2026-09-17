@@ -12,6 +12,13 @@ function expect(source, pattern, label) {
   }
 }
 
+function reject(source, pattern, label) {
+  if (pattern.test(source)) {
+    console.error(`Forbidden runtime contract: ${label}`);
+    process.exit(1);
+  }
+}
+
 for (const status of ['working', 'thinking', 'waiting', 'blocked', 'reviewing', 'sleeping']) {
   expect(index, new RegExp(`['\"]${status}['\"]`), `status ${status}`);
 }
@@ -33,6 +40,9 @@ for (const endpoint of [
 expect(entry, /authorizeRequest\(/, 'Cloudflare Access authorization wrapper');
 expect(entry, /access_not_configured/, 'fail-closed Access configuration');
 expect(entry, /storage_deferred/, 'D1 quota graceful defer');
+expect(entry, /schedule_guard_deferred/, 'scheduler soft-cap preservation guard');
+expect(entry, /const reserve = 3;/, 'scheduler capacity reserve');
+reject(entry, /url\.pathname === ['\"]\/health['\"].*return app\.fetch/s, 'public health bypass');
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
 expect(index, /createFounderNotice/, 'Founder attention/approval path');
