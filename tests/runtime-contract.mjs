@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const entry = fs.readFileSync('src/entry.js', 'utf8');
 const index = fs.readFileSync('src/index.js', 'utf8');
+const auth = fs.readFileSync('src/auth.js', 'utf8');
 const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
 const approvalIntegrity = fs.readFileSync('migrations/0005_approval_integrity.sql', 'utf8');
 const cadenceIntegrity = fs.readFileSync('migrations/0006_schedule_cadence_anchor.sql', 'utf8');
@@ -56,6 +57,12 @@ expect(entry, /application_json_required/, 'JSON mutation contract');
 reject(entry, /url\.pathname === ['\"]\/health['\"].*return app\.fetch/s, 'public health bypass');
 reject(entry, /app\.scheduled\(/, 'legacy unleased cron execution');
 
+expect(auth, /jwtVerify\(/, 'Access JWT signature verification');
+expect(auth, /issuer: teamDomain/, 'Access issuer verification');
+expect(auth, /audience/, 'Access audience verification');
+expect(auth, /access_human_identity_required/, 'service-token/non-human Access identity rejected');
+expect(auth, /payload\.email/, 'human Access identity derived from signed email claim');
+
 expect(scheduler, /MAX_RUNS_PER_TICK = 3/, 'bounded scheduler batch');
 expect(scheduler, /claim_token/, 'atomic scheduler claim token');
 expect(scheduler, /lease_until/, 'scheduler lease expiry');
@@ -82,6 +89,8 @@ expect(index, /claimAgentRun/, 'atomic agent run claim');
 expect(index, /run_lease_until/, 'agent run lease expiry runtime');
 expect(index, /run_token=\?/, 'token-scoped agent run lease release');
 expect(index, /reason:'agent_busy'/, 'concurrent agent work defers instead of double-running');
+expect(index, /try \{ await releaseAgentRun\(env, agentId, leaseToken\); \} catch \{\}/, 'lease release cannot mask completed inference');
+expect(index, /derivedFounderInbox/, 'bootstrap reuses loaded Founder Inbox rows');
 
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
