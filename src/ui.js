@@ -109,10 +109,28 @@ function update(dt) {
   }
 }
 
-function drawRoom(x, y, w, h, label) {
-  ctx.fillStyle = '#151a22'; ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = '#343b48'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
-  ctx.fillStyle = '#7f8795'; ctx.font = '10px ui-monospace, monospace'; ctx.fillText(label, x + 10, y + 18);
+function drawRoom(x, y, w, h, label, accent = '#b54cff') {
+  ctx.fillStyle = '#151719'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,.035)'; ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+  ctx.fillStyle = 'rgba(118,86,58,.55)'; ctx.fillRect(x + 12, y + h - 24, w - 24, 12);
+  ctx.strokeStyle = '#554a40'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(181,76,255,.45)'; ctx.beginPath(); ctx.moveTo(x + 10, y + 28); ctx.lineTo(x + w - 10, y + 28); ctx.stroke();
+  ctx.fillStyle = accent; ctx.fillRect(x + 10, y + 10, 18, 4);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '10px ui-monospace, monospace'; ctx.fillText(label, x + 10, y + 23);
+}
+
+function drawPlant(x, y, size = 1) {
+  ctx.fillStyle = '#5c432f'; ctx.fillRect(x - 5 * size, y + 10 * size, 10 * size, 12 * size);
+  ctx.fillStyle = '#2f6b46';
+  ctx.beginPath(); ctx.ellipse(x - 8 * size, y + 3 * size, 8 * size, 15 * size, -.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 7 * size, y + 2 * size, 8 * size, 16 * size, .55, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, y - 6 * size, 9 * size, 19 * size, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawDesk(x, y, w = 52) {
+  ctx.fillStyle = '#8a603d'; ctx.fillRect(x, y, w, 9);
+  ctx.fillStyle = '#332922'; ctx.fillRect(x + 4, y + 9, 5, 20); ctx.fillRect(x + w - 9, y + 9, 5, 20);
+  ctx.fillStyle = '#d7c7af'; ctx.fillRect(x + 11, y - 7, 20, 7);
 }
 
 function render() {
@@ -124,19 +142,35 @@ function render() {
   }
   ctx.setTransform(dpr * state.zoom, 0, 0, dpr * state.zoom, dpr * state.panX, dpr * state.panY);
   ctx.clearRect(-state.panX / state.zoom, -state.panY / state.zoom, canvas.width, canvas.height);
-  ctx.fillStyle = '#0b0d13'; ctx.fillRect(0, 0, COLS * TILE, ROWS * TILE);
+  const bg = ctx.createLinearGradient(0, 0, 0, ROWS * TILE);
+  bg.addColorStop(0, '#191719'); bg.addColorStop(.55, '#2b2927'); bg.addColorStop(1, '#17181b');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, COLS * TILE, ROWS * TILE);
   for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    ctx.fillStyle = (x + y) % 2 ? '#222832' : '#252b35';
+    ctx.fillStyle = (x + y) % 2 ? '#4a443d' : '#514a42';
     ctx.fillRect(x * TILE, y * TILE, TILE - 1, TILE - 1);
   }
-  drawRoom(2 * TILE, 1 * TILE, 6 * TILE, 4 * TILE, 'FOUNDER');
-  drawRoom(2 * TILE, 6 * TILE, 7 * TILE, 4 * TILE, 'RESEARCH');
-  drawRoom(2 * TILE, 11 * TILE, 7 * TILE, 4 * TILE, 'MARKETING');
-  drawRoom(17 * TILE, 6 * TILE, 6 * TILE, 4 * TILE, 'ADMIN');
-  drawRoom(17 * TILE, 11 * TILE, 6 * TILE, 4 * TILE, 'FINANCE');
-  drawRoom(10 * TILE, 11 * TILE, 6 * TILE, 4 * TILE, 'LOUNGE');
-  ctx.fillStyle = '#2f2739'; ctx.fillRect(10 * TILE, 7 * TILE, 6 * TILE, 3 * TILE);
-  ctx.fillStyle = '#b54cff'; ctx.font = 'bold 12px ui-sans-serif'; ctx.fillText('PIXEL AGENTS VANILLA WORLD', 10 * TILE + 14, 8 * TILE);
+  ctx.fillStyle = 'rgba(245,184,105,.12)'; ctx.beginPath(); ctx.ellipse(13 * TILE, 8 * TILE, 190, 110, 0, 0, Math.PI * 2); ctx.fill();
+  drawRoom(2 * TILE, 1 * TILE, 6 * TILE, 4 * TILE, 'FOUNDER', '#b54cff');
+  drawRoom(2 * TILE, 6 * TILE, 7 * TILE, 4 * TILE, 'RESEARCH', '#9f79ff');
+  drawRoom(2 * TILE, 11 * TILE, 7 * TILE, 4 * TILE, 'MARKETING', '#c96cff');
+  drawRoom(17 * TILE, 6 * TILE, 6 * TILE, 4 * TILE, 'ADMIN', '#7bb7ff');
+  drawRoom(17 * TILE, 11 * TILE, 6 * TILE, 4 * TILE, 'FINANCE', '#d9a35f');
+  drawRoom(10 * TILE, 1 * TILE, 6 * TILE, 3 * TILE, 'CAFE', '#d9a35f');
+  drawRoom(18 * TILE, 14 * TILE, 5 * TILE, 2 * TILE, 'RECEPTION', '#b54cff');
+  ctx.fillStyle = '#2a2421'; ctx.fillRect(21 * TILE, 14 * TILE + 30, 46, 36);
+  ctx.fillStyle = '#51483f'; ctx.fillRect(21 * TILE + 7, 14 * TILE + 36, 12, 24); ctx.fillRect(21 * TILE + 27, 14 * TILE + 36, 12, 24);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '9px ui-monospace, monospace'; ctx.fillText('ELEVATORS', 21 * TILE - 3, 14 * TILE + 26);
+  ctx.fillStyle = '#261f27'; ctx.fillRect(10 * TILE, 6 * TILE, 6 * TILE, 5 * TILE);
+  ctx.strokeStyle = 'rgba(181,76,255,.5)'; ctx.strokeRect(10 * TILE, 6 * TILE, 6 * TILE, 5 * TILE);
+  ctx.fillStyle = '#6f563d'; ctx.fillRect(11 * TILE, 12 * TILE, 4 * TILE, 28);
+  ctx.fillStyle = '#2d6b45'; ctx.beginPath(); ctx.arc(13 * TILE, 8 * TILE, 42, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#43915e'; ctx.beginPath(); ctx.arc(12 * TILE + 18, 8 * TILE - 12, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6f4a30'; ctx.fillRect(13 * TILE - 5, 8 * TILE + 25, 10, 52);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '10px ui-monospace, monospace'; ctx.fillText('ATRIUM', 12 * TILE + 22, 7 * TILE - 24);
+  drawDesk(3 * TILE + 18, 3 * TILE + 10); drawDesk(3 * TILE + 22, 8 * TILE + 18); drawDesk(3 * TILE + 20, 13 * TILE + 10);
+  drawDesk(18 * TILE + 10, 8 * TILE + 18); drawDesk(18 * TILE + 12, 13 * TILE + 10);
+  drawPlant(8 * TILE, 5 * TILE, .9); drawPlant(16 * TILE, 5 * TILE, .9); drawPlant(9 * TILE, 13 * TILE, .8); drawPlant(17 * TILE, 12 * TILE, .8);
+  ctx.fillStyle = '#b54cff'; ctx.font = 'bold 12px ui-sans-serif'; ctx.fillText('INSPIRE HQ CANVAS WORLD', 10 * TILE + 12, 6 * TILE + 20);
   const chars = [...state.characters.values()].sort((a, b) => a.y - b.y);
   for (const ch of chars) drawCharacter(ch);
 }
