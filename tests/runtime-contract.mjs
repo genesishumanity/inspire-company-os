@@ -4,6 +4,7 @@ const entry = fs.readFileSync('src/entry.js', 'utf8');
 const index = fs.readFileSync('src/index.js', 'utf8');
 const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
 const approvalIntegrity = fs.readFileSync('migrations/0005_approval_integrity.sql', 'utf8');
+const cadenceIntegrity = fs.readFileSync('migrations/0006_schedule_cadence_anchor.sql', 'utf8');
 const ui = fs.readFileSync('src/ui.js', 'utf8');
 const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
 
@@ -61,10 +62,14 @@ expect(scheduler, /MAX_CONSECUTIVE_FAILURES = 3/, 'scheduler terminal failure th
 expect(scheduler, /schedule_blocked/, 'terminal schedule block event');
 expect(scheduler, /founder_attention/, 'terminal failure routes to Founder Inbox');
 expect(scheduler, /paidFallbackUsed: false/, 'scheduler paid fallback prohibition');
+expect(scheduler, /cadence_anchor_at/, 'retry-safe recurrence cadence');
+expect(scheduler, /nextRecurringTime\(schedule\.recurrence, cadenceFrom\)/, 'cadence advances from planned slot');
 
 expect(approvalIntegrity, /approval_not_granted/, 'database approval gate');
 expect(approvalIntegrity, /trg_rejected_approval_blocks_task/, 'rejection blocks linked task');
 expect(approvalIntegrity, /approval_link_required/, 'approval link integrity');
+expect(cadenceIntegrity, /cadence_anchor_at/, 'database cadence anchor');
+expect(cadenceIntegrity, /trg_schedule_cadence_anchor_after_insert/, 'new schedules receive cadence anchor');
 
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
