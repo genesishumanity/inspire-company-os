@@ -2,19 +2,20 @@
 
 Updated: 2026-09-17
 
-V0 follows least privilege. Agent roles can propose work and update internal Company OS records, but high-impact external actions do not have execution adapters.
+V0 follows least privilege. Agents can propose work and update internal Company OS records, but high-impact external actions have no execution adapters.
 
 ## Baseline permissions
 
-| Capability | Agent | Founder / human | V0 behavior |
+| Capability | Agent | Founder / authorized human | V0 behavior |
 |---|---:|---:|---|
-| Read Company OS registry/activity/tasks | yes | yes | allowed |
+| Read Company OS registry/activity/tasks | yes | yes | allowed behind Access |
 | Create internal message | yes | yes | allowed |
 | Create/update internal task | yes | yes | allowed |
 | Request Founder approval | yes | yes | allowed |
-| Create schedule for internal AI work | yes, when exposed through trusted internal tooling | yes | allowed |
-| Run Workers AI for own role work | event-triggered | yes | allowed within guardrails |
-| Change another agent's role prompt/permissions | no | yes, via code/config review | not exposed as runtime endpoint |
+| Create schedule for internal AI work | trusted internal flow | yes | allowed |
+| Run Workers AI for role work | event-triggered | yes | allowed within guardrails |
+| Add a new registry agent | no autonomous self-expansion | yes | `POST /api/agents` |
+| Change an existing agent's role prompt/permissions | no | reviewed human code/config change | no runtime endpoint |
 | Send external email | no | no runtime adapter | approval queue only / future |
 | Charge/refund/payment action | no | no runtime adapter | approval queue only / future |
 | Customer-data automation | no | no runtime adapter | approval queue only / future |
@@ -24,49 +25,33 @@ V0 follows least privilege. Agent roles can propose work and update internal Com
 
 ## Initial agents
 
-### Admin
+- **Admin:** coordinates workstreams, routes internal tasks/messages and surfaces blockers.
+- **Founder Office:** synthesizes company state and escalates decisions; it is not the Founder and cannot self-approve restricted actions.
+- **Research:** produces sourced internal research/knowledge; no external publishing or spend commitments.
+- **Marketing:** produces internal positioning/launch work; no campaign send, media buying or customer contact in V0.
+- **Finance:** produces cost/unit-economics analysis; no payments, refunds, subscriptions or accounting mutations.
 
-Can coordinate workstreams, create/route internal tasks and messages, and surface blockers. Admin cannot silently cross the external-action boundary.
+## Approval semantics
 
-### Founder Office
-
-Synthesizes company state and escalates risks/decisions. Founder Office is not the Founder and cannot self-approve restricted actions.
-
-### Research
-
-Produces sourced internal research/knowledge. It can propose findings and tasks; it cannot publish externally or make spend commitments.
-
-### Marketing
-
-Produces internal positioning/launch/marketing work. It cannot send campaigns, buy media, publish, or contact customers in V0.
-
-### Finance
-
-Produces internal cost/unit-economics analysis and spending warnings. It cannot execute payments, refunds, subscriptions, or accounting changes.
-
-## Approval queue semantics
-
-An approval is a decision record, not an execution engine.
-
-`approved` means the Founder/human has authorized the proposed action conceptually. V0 intentionally does not contain adapters that execute external high-impact actions after approval.
-
-This prevents an approval click from unexpectedly sending email, moving money, touching customer data, changing GitHub destructively, or deploying production.
+An approval is a decision record, not an execution engine. `approved` means the Founder/human authorized the concept; V0 intentionally has no adapter that turns the click into an email send, money movement, customer-data operation, destructive GitHub change or production deployment.
 
 ## Audit rules
 
-Audit events are written for:
+Audit records cover human/manual status changes, registry additions, messages, task mutations, approval requests/decisions, schedules and AI run success/failure/defer decisions.
 
-- human/manual agent status changes;
-- created messages;
-- created/updated tasks;
-- approval requests and decisions;
-- schedules created/updated;
-- AI run success/failure/defer decisions.
-
-Secrets, full credentials, access tokens and model chain-of-thought must never be written to `audit_log`, `activity_events`, messages or task descriptions.
+Never write secrets, credentials, Access JWTs, API keys or model chain-of-thought to audit/activity/messages/tasks.
 
 ## Authentication perimeter
 
-Production `ops.getinspiration.com` must sit behind Cloudflare Access before DNS/route exposure. The application does not treat the `Cf-Access-Authenticated-User-Email` header as a standalone authentication mechanism; it is used only as audit metadata after the Cloudflare Access perimeter has authenticated the request.
+Production is fail-closed:
 
-If Cloudflare Access is not configured, do not expose the production custom domain.
+1. Cloudflare Access must protect `ops.getinspiration.com`.
+2. `src/entry.js` independently validates `Cf-Access-Jwt-Assertion` against `TEAM_DOMAIN` and `POLICY_AUD` using Cloudflare's published JWKS.
+3. `ACCESS_ALLOWED_EMAILS` may additionally restrict identities after JWT validation.
+4. If Access configuration is missing or invalid, UI/API requests are rejected.
+5. `workers.dev` and Worker preview URLs are disabled.
+6. `/health` is the only intentionally unauthenticated route and exposes liveness only.
+
+The `Cf-Access-Authenticated-User-Email` value used in audit metadata is overwritten at the secure entry layer with the identity derived from the validated JWT rather than trusted directly from an incoming public header.
+
+Local development bypass is allowed only when `AUTH_MODE=local` and the request hostname is localhost/loopback. Production config uses `AUTH_MODE=access`.
