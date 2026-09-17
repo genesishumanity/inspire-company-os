@@ -75,6 +75,42 @@ async function setStatus(env, id, status, reason, eventType = 'status_changed') 
   return getAgent(env, id);
 }
 
+function isQuotaSleeping(agent) {
+  if (agent?.status !== 'sleeping') return false;
+  return /soft cap|quota|capacity/i.test(String(agent.status_reason || ''));
+}
+
+async function taskDrivenState(env, agentId, fallbackReason = 'Waiting for the next event') {
+  const task = await env.COMPANY_OS_DB.prepare(
+    `SELECT id,title,status FROM tasks
+     WHERE owner_agent_id=? AND status!='done'
+     ORDER BY CASE status
+       WHEN 'blocked' THEN 1
+       WHEN 'in_progress' THEN 2
+       WHEN 'review' THEN 3
+       WHEN 'todo' THEN 4
+       ELSE 5 END,
+       updated_at DESC, id DESC
+     LIMIT 1`
+  ).bind(agentId).first();
+
+  if (!task) return { status: 'waiting', reason: fallbackReason };
+  if (task.status === 'blocked') return { status: 'blocked', reason: `Blocked task #${task.id}: ${task.title}` };
+  if (task.status === 'in_progress') return { status: 'working', reason: `Active task #${task.id}: ${task.title}` };
+  if (task.status === 'review') return { status: 'reviewing', reason: `Review task #${task.id}: ${task.title}` };
+  return { status: 'waiting', reason: `Queued task #${task.id}: ${task.title}` };
+}
+
+async function syncTaskDrivenStatus(env, agentId, eventType = 'task_status_changed', fallbackReason = 'Waiting for the next event') {
+  const current = await getAgent(env, agentId);
+  if (!current) throw new Error('agent_not_found');
+  // A task/message event must not pretend an agent woke up while inference is
+  // actually running or while a real quota/capacity sleep is still in force.
+  if (current.status === 'thinking' || isQuotaSleeping(current)) return current;
+  const desired = await taskDrivenState(env, agentId, fallbackReason);
+  return setStatus(env, agentId, desired.status, desired.reason, eventType);
+}
+
 function quotaLike(error) {
   const msg = String(error?.message || error || '').toLowerCase();
   return ['quota', 'neuron', 'capacity', '429', '3040', '5035', 'exceeded', 'rate limit'].some((x) => msg.includes(x));
@@ -157,7 +193,8 @@ export async function runAgent(env, agentId, instruction, context = '', source =
        VALUES (?, ?, ?, ?, ?, 0, 1)`
     ).bind(agentId, model, inputTokens, outputTokens, estPerRequest).run();
     await activity(env, agentId, 'agent_output', clean(output, 600), { output: clean(output, 12000), source, model }, 'agent', agentId);
-    await setStatus(env, agentId, 'waiting', 'Last AI event completed; waiting for the next event', 'ai_completed');
+    const desired = await taskDrivenState(env, agentId, 'Last AI event completed; waiting for the next event');
+    await setStatus(env, agentId, desired.status, desired.reason, 'ai_completed');
     await audit(env, 'agent', agentId, 'ai_run_completed', 'agent', agentId, { source, model, inputTokens, outputTokens });
     return { deferred: false, output, model, usage: { inputTokens, outputTokens, estimatedNeurons: estPerRequest } };
   } catch (error) {
@@ -273,7 +310,9 @@ async function route(request, env) {
     ).bind(sender, recipient, clean(payload.subject, 300) || null, body).run();
     const id = inserted.meta.last_row_id;
     await activity(env, sender, 'message_sent', `${senderAgent.name} → ${recipientAgent.name}: ${clean(payload.subject || body, 180)}`, { messageId: id }, 'message', id);
-    if (recipientAgent.status === 'sleeping') await setStatus(env, recipient, 'waiting', `Message received from ${senderAgent.name}`, 'message_received');
+    if (recipientAgent.status === 'sleeping' && !isQuotaSleeping(recipientAgent)) {
+      await syncTaskDrivenStatus(env, recipient, 'message_received', `Message received from ${senderAgent.name}`);
+    }
     await audit(env, 'human', actorFrom(request), 'message_created', 'message', id, { sender, recipient });
     return json({ id }, 201);
   }
@@ -307,10 +346,7 @@ async function route(request, env) {
     ).bind(title, clean(payload.description, 5000) || null, owner, creator, priority, clean(payload.due_at, 100) || null, needsApproval, approvalId).run();
     const id = inserted.meta.last_row_id;
     await activity(env, creator, 'task_created', title, { taskId: id, owner, priority, approvalId }, 'task', id);
-    if (owner) {
-      const ownerAgent = await getAgent(env, owner);
-      if (ownerAgent?.status === 'sleeping') await setStatus(env, owner, 'waiting', `Task assigned: ${title}`, 'task_assigned');
-    }
+    if (owner) await syncTaskDrivenStatus(env, owner, 'task_assigned', `Task assigned: ${title}`);
     await audit(env, 'human', actorFrom(request), 'task_created', 'task', id, { owner, priority, approvalId });
     return json({ id, approvalId }, 201);
   }
@@ -324,8 +360,7 @@ async function route(request, env) {
     const priority = PRIORITIES.has(payload.priority) ? payload.priority : task.priority;
     await env.COMPANY_OS_DB.prepare(`UPDATE tasks SET status=?,priority=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(status, priority, task.id).run();
     if (task.owner_agent_id) {
-      const mapped = { in_progress: 'working', blocked: 'blocked', review: 'reviewing', done: 'waiting', todo: 'waiting' }[status];
-      await setStatus(env, task.owner_agent_id, mapped, `Task #${task.id}: ${task.title}`, 'task_status_changed');
+      await syncTaskDrivenStatus(env, task.owner_agent_id, 'task_status_changed', `Task #${task.id}: ${task.title}`);
     }
     await activity(env, task.owner_agent_id || task.created_by_agent_id, 'task_updated', `${task.title} → ${status}`, { taskId: task.id, status, priority }, 'task', task.id);
     await audit(env, 'human', actorFrom(request), 'task_updated', 'task', task.id, { status, priority });
@@ -341,7 +376,8 @@ async function route(request, env) {
     const inserted = await env.COMPANY_OS_DB.prepare(
       `INSERT INTO approvals (requested_by_agent_id,action_type,title,rationale,payload_json) VALUES (?,?,?,?,?)`
     ).bind(requester, clean(payload.action_type || 'restricted_action', 100), title, clean(payload.rationale, 4000), JSON.stringify(payload.payload || {})).run();
-    const id = inserted.meta.last_row_id;
+    const id = inserted?.meta?.last_row_id || null;
+    if (Number(inserted?.meta?.changes || 0) === 0) return json({ id: null, deduped: true }, 200);
     await activity(env, requester, 'approval_requested', title, { approvalId: id }, 'approval', id);
     await audit(env, 'human', actorFrom(request), 'approval_requested', 'approval', id, { requester });
     return json({ id }, 201);
