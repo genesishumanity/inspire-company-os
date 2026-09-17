@@ -141,9 +141,53 @@ async function securedFetch(request, env, ctx) {
   }
 }
 
+async function scheduledFetch(controller, env, ctx) {
+  // index.js processes at most 3 due schedules per cron tick. Keep a three-request
+  // reserve so a near-soft-cap cron cannot start work that runAgent() would defer
+  // and then accidentally advance as completed.
+  const reserve = 3;
+  const softCap = Math.max(1, Number(env.AI_DAILY_REQUEST_SOFT_CAP || 100));
+
+  try {
+    const usage = await env.COMPANY_OS_DB.prepare(
+      `SELECT COUNT(*) AS requests FROM ai_usage WHERE date(ts) = date('now')`
+    ).first();
+    const requests = Number(usage?.requests || 0);
+
+    if (requests + reserve > softCap) {
+      const alreadyLogged = await env.COMPANY_OS_DB.prepare(
+        `SELECT id FROM activity_events
+         WHERE event_type='schedule_guard_deferred' AND date(ts)=date('now')
+         ORDER BY id DESC LIMIT 1`
+      ).first();
+
+      if (!alreadyLogged) {
+        await env.COMPANY_OS_DB.batch([
+          env.COMPANY_OS_DB.prepare(
+            `INSERT INTO activity_events (event_type,summary,payload_json,related_type)
+             VALUES ('schedule_guard_deferred', ?, ?, 'scheduler')`
+          ).bind(
+            `Scheduled AI work deferred to protect the daily soft cap (${softCap})`,
+            JSON.stringify({ requests, reserve, softCap, paidFallbackUsed: false }),
+          ),
+          env.COMPANY_OS_DB.prepare(
+            `INSERT INTO audit_log (actor_type,actor_id,action,entity_type,details_json)
+             VALUES ('system','scheduler','schedule_guard_deferred','scheduler',?)`
+          ).bind(JSON.stringify({ requests, reserve, softCap, paidFallbackUsed: false })),
+        ]);
+      }
+      return;
+    }
+  } catch (error) {
+    // Fail closed for scheduled inference. If D1 itself is unavailable or quota-limited,
+    // preserving the schedule is safer than attempting work without the guardrail.
+    return;
+  }
+
+  return app.scheduled(controller, env, ctx);
+}
+
 export default {
   fetch: securedFetch,
-  scheduled(controller, env, ctx) {
-    return app.scheduled(controller, env, ctx);
-  },
+  scheduled: scheduledFetch,
 };
