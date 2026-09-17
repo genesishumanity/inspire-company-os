@@ -224,6 +224,39 @@ Decision:
 - Admin should review against latest `main` before merge;
 - Workforce will continue documentation-only updates without autonomously merging product/runtime changes into its branch.
 
+## 2026-09-17 — Artifact yield checkpoint
+
+### Action 23 — Audited plan/document output against evidence-bearing output
+
+Reviewed current Research, Growth, Marketing, Performance, Founder Office and Web source-of-truth files plus the post-Research-stop branch commit window.
+
+Decision:
+- do not use raw document count as a performance measure;
+- classify work role-relatively as decision-enabling, evidence-bearing, implementation/handoff, strategy/plan, or duplicate/stale/superseded;
+- Research's 77-pack sequence now has an explicit maintenance-mode stop, and no later Research commit was found in the inspected post-stop branch window;
+- Growth, Marketing and Performance each explicitly state that generic strategy expansion should stop until real evidence arrives;
+- recent Web documentation is corrective implementation/release handoff because it reconciles deploy/Brand V2 truth, not generic planning;
+- Founder Office's current index/anti-complexity rule is corrective to earlier documentation-sprawl risk.
+
+### Action 24 — Shifted primary waste hypothesis from strategy production to execution waiting
+
+Current evidence does **not** support a claim that saturated strategy teams are continuing generic strategy production after their documented stop gates in the inspected window.
+
+Decision:
+- primary current waste risk is blocked/waiting capacity caused by missing runtime, measurement, real-session, asset, deploy/smoke and controlled-activation evidence;
+- do not manufacture work merely to keep blocked agents busy;
+- route new Research/Growth/Marketing/Performance work only when a real evidence trigger appears.
+
+Added three future operational measures to the Admin brief:
+1. **Artifact Yield Mix** — accepted decision/evidence/implementation output vs plan/duplicate/stale output, interpreted by role;
+2. **Reopened Work Rate** — work reopened because source truth was stale/superseded;
+3. **Founder Attention Precision** — founder escalations producing a real decision vs total founder escalations.
+
+Admin brief update commit:
+- `47cb646e92c36577f7394051205abca1cbda2b10`
+
+No prompts, permissions, registry, model assignments, product code, specialist source-of-truth or deploy configuration were changed.
+
 ## Next log entry trigger
 
 Append only when Workforce performs a meaningful new audit/recommendation/action. Do not generate heartbeat/noise entries.
