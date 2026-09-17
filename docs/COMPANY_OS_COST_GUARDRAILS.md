@@ -9,57 +9,62 @@ Goal: keep V0 at approximately $0 and fail safely instead of silently falling ba
 Official Cloudflare documentation checked on 2026-09-17:
 
 - Workers Free: 100,000 requests/day; 10 ms CPU/request; 5 cron triggers/account.
-- D1 Free: 5,000,000 rows read/day; 100,000 rows written/day; 5 GB total storage. Since 2026-09-01, daily row limits are enforced and queries fail until the UTC reset when exceeded.
+- D1 Free: 5,000,000 rows read/day; 100,000 rows written/day; 5 GB total account storage and 500 MB maximum per Free database. Daily row limits are enforced; queries fail until the 00:00 UTC reset when exceeded.
 - Workers AI: 10,000 Neurons/day free allocation. On Workers Free there is no automatic paid overage path beyond the free allocation.
-- `@cf/zai-org/glm-4.7-flash` remains available on Workers Free.
+- `@cf/zai-org/glm-4.7-flash` remains available on Workers Free. Resource-intensive models such as GLM-5.2/Kimi K2.6 require Workers Paid, so V0 intentionally does not depend on them.
 
 Sources:
 
 - https://developers.cloudflare.com/workers/platform/limits/
 - https://developers.cloudflare.com/d1/platform/pricing/
+- https://developers.cloudflare.com/d1/platform/limits/
 - https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/
 - https://developers.cloudflare.com/workers-ai/platform/pricing/
 - https://developers.cloudflare.com/workers-ai/models/glm-4.7-flash/
+- https://developers.cloudflare.com/changelog/post/2026-07-28-models-require-workers-paid/
 
 ## Runtime rules
 
 1. **No paid model fallback.** V0 uses only the Workers AI binding.
 2. **No idle inference.** Messages and UI polling never invoke AI.
 3. **Explicit/due-event only.** AI runs only through an explicit agent run or due schedule.
-4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP=50` Company OS AI requests per UTC day.
+4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP=50` Company OS AI attempts per UTC day.
 5. **Quota/capacity failure = sleep/defer.** The affected agent sleeps, Founder attention is surfaced, and no paid provider is attempted.
 6. **Non-quota runtime failure = blocked.** No blind retry loop.
 7. **Cron work is bounded.** At most three due schedules per invocation.
-8. **Frontend polling does not invoke AI.** Visible polling is 8 seconds; hidden polling slows to 30 seconds.
-9. **D1 hard-limit response is graceful.** If D1 reports its free-tier daily row limit, the secure entry layer returns `503 storage_deferred` with retry-after guidance instead of pretending the operation succeeded.
+8. **Scheduler reserve.** Before cron work starts, the secure entry layer requires room for all three possible runs. If `current_requests + 3 > soft_cap`, scheduled inference is deferred instead of starting work that could be falsely advanced as completed.
+9. **Adaptive frontend polling.** Active changes poll at 8 seconds; after idle cycles the UI backs off to 15 then 30 seconds; hidden tabs poll at 60 seconds. Polling never invokes AI.
+10. **D1 hard-limit response is graceful.** If D1 reports a Free-tier daily row limit, the secure entry layer returns `503 storage_deferred` with retry-after guidance instead of pretending the operation succeeded.
+11. **No heartbeat writes.** Reading the office does not create events or status noise.
 
 ## AI usage / cost estimation
 
-The current GLM-4.7-Flash Cloudflare rate is:
+The current GLM-4.7-Flash Cloudflare pricing is equivalent to approximately:
 
-- 5,500 neurons per 1M input tokens
-- 36,400 neurons per 1M output tokens
-- Workers AI reference rate: $0.011 per 1,000 neurons
+- 5,500 neurons per 1M input tokens (`$0.0605 / 1M input tokens`)
+- 36,400 neurons per 1M output tokens (`$0.40 / 1M output tokens`)
+- Workers AI reference rate: `$0.011 / 1,000 neurons`
 
 Migration `0002_ai_usage_estimates.sql` estimates neurons from token usage when Workers AI returns token counts. If token usage is unavailable, `AI_EST_NEURONS_PER_REQUEST=60` is used as a conservative V0 fallback.
 
-This number is an **estimate**, not a billing record. The Cloudflare dashboard remains the billing/source-of-truth for actual neuron consumption.
-
-The `ai_usage` table records request success/failure, model, input/output tokens when available, estimated neurons, and estimated reference USD value. A displayed USD estimate does not mean money was charged: V0 does not have a paid fallback path.
+This is an **estimate**, not a billing record. The Cloudflare dashboard remains source-of-truth for actual neuron consumption. A displayed USD estimate does not mean money was charged: V0 has no paid fallback path.
 
 ## Operating thresholds
 
 - 25 AI runs/day: review recurring schedules for unnecessary work.
 - 40 AI runs/day: avoid adding more recurring AI work that day.
-- 50 AI runs/day: defer further Company OS AI runs until UTC reset.
+- 47+ AI attempts/day: cron reserve can defer scheduled inference so the three-run batch cannot cross the 50-run soft cap.
+- 50 AI attempts/day: defer further Company OS AI work until UTC reset.
 - Any quota/capacity error: sleep affected agent and surface Founder attention.
 
-The 50-run cap plus the 60-neuron fallback estimate represents roughly 3,000 estimated neurons/day before token-based correction, leaving substantial room under the 10,000-neuron free allocation for normal V0 prompts.
+The 50-run cap plus the 60-neuron fallback estimate represents roughly 3,000 estimated neurons/day before token-based correction, leaving headroom under the 10,000-neuron free allocation for normal V0 prompts.
 
 ## D1 efficiency rules
 
 - indexed feed/task/approval/schedule lookups;
 - bounded recent-row queries;
+- `0003_cost_guard_indexes.sql` adds indexes for daily AI guardrail and scheduler event lookups so growing history does not force full-history scans;
+- adaptive UI polling reduces repeated bootstrap reads when the office is idle;
 - no heartbeat writes;
 - no events generated by polling reads;
 - no chain-of-thought storage;
