@@ -16,9 +16,15 @@ Updated: 2026-09-17
 - [x] Extensible registry schema for later departments.
 - [x] Six real statuses: working / thinking / waiting / blocked / reviewing / sleeping.
 - [x] Backend-driven activity events.
+- [x] Production manual status changes are blocked; office status must come from real backend work/events.
 - [x] Agent-to-agent messages.
 - [x] Shared tasks.
 - [x] Founder approval queue.
+- [x] Approval-gated tasks cannot progress to in-progress/review/done before an approved Founder decision.
+- [x] Approval integrity is enforced in both the secure entry layer and D1 triggers.
+- [x] Rejected approvals automatically block their linked task.
+- [x] Production approval decisions fail closed unless the authenticated identity is in `FOUNDER_APPROVER_EMAILS`.
+- [x] Mutation endpoints require JSON and reject browser requests marked cross-site.
 - [x] Schedules/events with bounded cron processing.
 - [x] Scheduler leases prevent duplicate execution when cron ticks overlap.
 - [x] Scheduler failure circuit breaker retries bounded failures and disables/escalates after 3 consecutive failures.
@@ -35,10 +41,11 @@ Updated: 2026-09-17
 - [x] Simple 2D CSS office UI with no fake motion/activity.
 - [x] Adaptive live polling: 8s while active, 15/30s as idle, 60s in hidden tabs.
 - [x] Cloudflare Access is mandatory for **all** production routes, including `/health`.
-- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, adaptive polling, scheduler reserve/lease/circuit-breaker behavior, Founder approval path, no-paid-fallback guardrail and production-domain configuration.
-- [x] SQLite smoke applies every migration, verifies the five-agent registry, AI usage estimate trigger, cost indexes and scheduler lease contract.
-- [x] `0003_cost_guard_indexes.sql` adds cost-oriented lookup indexes.
+- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, mutation guards, truthful status, Founder-only approvals, adaptive polling, scheduler reserve/lease/circuit-breaker behavior, no-paid-fallback guardrail and production-domain configuration.
+- [x] SQLite smoke applies every migration and verifies the five-agent registry, AI usage estimate trigger, cost indexes, scheduler lease contract, approval gating, approved progression, and rejected-task blocking.
+- [x] `0003_cost_guard_indexes.sql` adds the missing cost-oriented scheduler lookup index without duplicating base indexes.
 - [x] `0004_scheduler_leases.sql` adds claim/lease/attempt/failure state for safe cron execution.
+- [x] `0005_approval_integrity.sql` adds database-level approval integrity.
 - [x] Production deploy remains human-gated by `scripts/predeploy.mjs`.
 - [x] Undeployed D1 uses UUID-shaped sentinel `00000000-0000-0000-0000-000000000000`, improving local/config tooling while predeploy still blocks production until replaced with the real Company OS D1 UUID.
 - [x] CI workflow remains deploy-free.
@@ -81,10 +88,11 @@ Required activation steps:
 3. Apply all migrations: `npm run db:migrate:remote`.
 4. Create a Cloudflare Access application/policy for `ops.getinspiration.com` restricted to Founder/authorized internal users.
 5. Configure Worker Access verification values: `TEAM_DOMAIN`, `POLICY_AUD`, and optionally `ACCESS_ALLOWED_EMAILS`. Do not copy INSPIRE core secrets.
-6. Run repository validation commands above.
-7. Intentionally approve deployment for that command only: `COMPANY_OS_DEPLOY_APPROVED=1 npm run deploy`.
-8. Map `ops.getinspiration.com` to the Company OS Worker only after Access is active.
-9. Smoke-test the authenticated live system.
+6. Configure `FOUNDER_APPROVER_EMAILS` with the Founder identity or identities allowed to approve/reject gated work. Approval decisions fail closed if this is missing.
+7. Run repository validation commands above.
+8. Intentionally approve deployment for that command only: `COMPANY_OS_DEPLOY_APPROVED=1 npm run deploy`.
+9. Map `ops.getinspiration.com` to the Company OS Worker only after Access is active.
+10. Smoke-test the authenticated live system.
 
 Do not bind the INSPIRE core D1 database or copy core production secrets into this Worker.
 
@@ -97,15 +105,17 @@ After activation, authenticate through Cloudflare Access and verify:
 3. Admin -> Research message changes Research from `sleeping` to `waiting` and records an event;
 4. Marketing task `in_progress` makes Marketing `working`;
 5. task `review` makes Marketing `reviewing`;
-6. approval-gated task appears in Founder Inbox;
-7. approve/reject updates audit/activity but executes no external action;
-8. explicit Research run shows `thinking` then `waiting` if Workers AI succeeds;
-9. one-time schedule executes only after due;
-10. overlapping cron attempts cannot execute one schedule twice during an active lease;
-11. repeated schedule failures stop after the bounded threshold and surface Founder attention;
-12. near soft-cap scheduled work remains queued/deferred rather than disappearing;
-13. `/api/audit` and `/api/usage` reflect real records;
-14. no paid external AI key is configured.
+6. approval-gated task appears in Founder Inbox and cannot progress before approval;
+7. a non-Founder Access identity cannot approve/reject gated work;
+8. rejection blocks the linked task; approval allows it to progress, but executes no external action;
+9. production manual status mutation returns `manual_status_disabled`;
+10. explicit Research run shows `thinking` then `waiting` if Workers AI succeeds;
+11. one-time schedule executes only after due;
+12. overlapping cron attempts cannot execute one schedule twice during an active lease;
+13. repeated schedule failures stop after the bounded threshold and surface Founder attention;
+14. near soft-cap scheduled work remains queued/deferred rather than disappearing;
+15. `/api/audit` and `/api/usage` reflect real records;
+16. no paid external AI key is configured.
 
 ## Next only after V0 is live
 
