@@ -1,4 +1,5 @@
 import { renderOffice } from './ui.js';
+import { reserveAiRequest } from './ai-budget.js';
 
 const STATUS_VALUES = new Set(['working', 'thinking', 'waiting', 'blocked', 'reviewing', 'sleeping']);
 const TASK_STATUS = new Set(['todo', 'in_progress', 'blocked', 'review', 'done']);
@@ -126,15 +127,24 @@ function extractAIText(result) {
 
 async function todayUsage(env) {
   const row = await env.COMPANY_OS_DB.prepare(
-    `SELECT COUNT(*) AS requests,
-            COALESCE(SUM(input_tokens),0) AS input_tokens,
-            COALESCE(SUM(output_tokens),0) AS output_tokens,
-            COALESCE(SUM(estimated_neurons),0) AS estimated_neurons,
-            COALESCE(SUM(estimated_cost_usd),0) AS estimated_cost_usd
-     FROM ai_usage
-     WHERE ts>=date('now') AND ts<datetime(date('now'),'+1 day')`
+    `WITH logged AS (
+       SELECT COUNT(*) AS logged_requests,
+              COALESCE(SUM(input_tokens),0) AS input_tokens,
+              COALESCE(SUM(output_tokens),0) AS output_tokens,
+              COALESCE(SUM(estimated_neurons),0) AS estimated_neurons,
+              COALESCE(SUM(estimated_cost_usd),0) AS estimated_cost_usd
+       FROM ai_usage
+       WHERE ts>=date('now') AND ts<datetime(date('now'),'+1 day')
+     )
+     SELECT CASE
+              WHEN COALESCE((SELECT reserved_requests FROM ai_daily_budget WHERE day=date('now')),0) > logged_requests
+                THEN COALESCE((SELECT reserved_requests FROM ai_daily_budget WHERE day=date('now')),0)
+              ELSE logged_requests
+            END AS requests,
+            logged_requests,input_tokens,output_tokens,estimated_neurons,estimated_cost_usd
+     FROM logged`
   ).first();
-  return row || { requests: 0, input_tokens: 0, output_tokens: 0, estimated_neurons: 0, estimated_cost_usd: 0 };
+  return row || { requests: 0, logged_requests: 0, input_tokens: 0, output_tokens: 0, estimated_neurons: 0, estimated_cost_usd: 0 };
 }
 
 async function createFounderNotice(env, requestedBy, title, rationale, payload = {}) {
@@ -169,23 +179,24 @@ export async function runAgent(env, agentId, instruction, context = '', source =
   const task = clean(instruction, 6000);
   if (!task) throw new Error('instruction_required');
 
-  const usage = await todayUsage(env);
-  const softCap = Math.max(1, Number(env.AI_DAILY_REQUEST_SOFT_CAP || 100));
-  if (Number(usage.requests || 0) >= softCap) {
-    await setStatus(env, agentId, 'sleeping', `AI daily soft cap (${softCap}) reached`, 'ai_deferred');
-    await createFounderNotice(env, agentId, `${agent.name} deferred by AI guardrail`, `Daily Company OS AI request soft cap of ${softCap} was reached. No paid fallback was attempted.`, { source });
-    await audit(env, 'system', 'quota-guard', 'ai_deferred', 'agent', agentId, { softCap, source });
-    return { deferred: true, reason: 'daily_soft_cap', softCap };
-  }
-
   const leaseToken = await claimAgentRun(env, agentId);
   if (!leaseToken) {
     await audit(env, 'system', 'agent-run-lease', 'ai_run_deferred_busy', 'agent', agentId, { source });
     return { deferred: true, reason:'agent_busy' };
   }
 
+  const softCap = Math.max(1, Number(env.AI_DAILY_REQUEST_SOFT_CAP || 100));
   const model = clean(env.AI_MODEL || '@cf/zai-org/glm-4.7-flash', 200);
+
   try {
+    const budgetReserved = await reserveAiRequest(env, softCap);
+    if (!budgetReserved) {
+      await setStatus(env, agentId, 'sleeping', `AI daily soft cap (${softCap}) reached`, 'ai_deferred');
+      await createFounderNotice(env, agentId, `${agent.name} deferred by AI guardrail`, `Daily Company OS AI request soft cap of ${softCap} was reached. No paid fallback was attempted.`, { source });
+      await audit(env, 'system', 'quota-guard', 'ai_deferred', 'agent', agentId, { softCap, source });
+      return { deferred: true, reason: 'daily_soft_cap', softCap };
+    }
+
     await setStatus(env, agentId, 'thinking', clean(task, 220), 'ai_started');
     const systemPrompt = [
       `You are ${agent.name}, ${agent.department}, inside INSPIRE Company OS.`,
@@ -196,14 +207,34 @@ export async function runAgent(env, agentId, instruction, context = '', source =
       'Be concise, evidence-aware, and separate facts from assumptions.',
     ].join('\n');
 
-    const result = await env.AI.run(model, {
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `${task}${context ? `\n\nContext:\n${clean(context, 8000)}` : ''}` },
-      ],
-      max_completion_tokens: 700,
-      temperature: 0.2,
-    });
+    let result;
+    try {
+      result = await env.AI.run(model, {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `${task}${context ? `\n\nContext:\n${clean(context, 8000)}` : ''}` },
+        ],
+        max_completion_tokens: 700,
+        temperature: 0.2,
+      });
+    } catch (error) {
+      const isQuota = quotaLike(error);
+      try {
+        await env.COMPANY_OS_DB.prepare(
+          `INSERT INTO ai_usage (agent_id,model,success,error_code) VALUES (?,?,0,?)`
+        ).bind(agentId, model, clean(error?.message || error, 300)).run();
+      } catch {}
+
+      if (isQuota) {
+        try { await setStatus(env, agentId, 'sleeping', 'Cloudflare AI quota/capacity reached; deferred with no paid fallback', 'ai_quota_sleep'); } catch {}
+        try { await createFounderNotice(env, agentId, `${agent.name} sleeping: AI quota/capacity`, 'Workers AI rejected the request due to quota, capacity, or rate limiting. Company OS did not fall back to a paid model.', { error: clean(error?.message || error, 500) }); } catch {}
+      } else {
+        try { await setStatus(env, agentId, 'blocked', 'AI execution failed; Founder/Admin review required', 'ai_failed'); } catch {}
+      }
+      try { await audit(env, 'system', 'ai-runtime', 'ai_run_failed', 'agent', agentId, { source, model, quotaLike: isQuota, error: clean(error?.message || error, 500) }); } catch {}
+      throw error;
+    }
+
     const output = extractAIText(result);
     const aiUsage = result?.usage || result?.result?.usage || {};
     const inputTokens = Number(aiUsage.prompt_tokens || aiUsage.input_tokens || 0);
@@ -219,19 +250,6 @@ export async function runAgent(env, agentId, instruction, context = '', source =
     await setStatus(env, agentId, desired.status, desired.reason, 'ai_completed');
     await audit(env, 'agent', agentId, 'ai_run_completed', 'agent', agentId, { source, model, inputTokens, outputTokens });
     return { deferred: false, output, model, usage: { inputTokens, outputTokens, estimatedNeurons: estPerRequest } };
-  } catch (error) {
-    const isQuota = quotaLike(error);
-    await env.COMPANY_OS_DB.prepare(
-      `INSERT INTO ai_usage (agent_id,model,success,error_code) VALUES (?,?,0,?)`
-    ).bind(agentId, model, clean(error?.message || error, 300)).run();
-    if (isQuota) {
-      await setStatus(env, agentId, 'sleeping', 'Cloudflare AI quota/capacity reached; deferred with no paid fallback', 'ai_quota_sleep');
-      await createFounderNotice(env, agentId, `${agent.name} sleeping: AI quota/capacity`, 'Workers AI rejected the request due to quota, capacity, or rate limiting. Company OS did not fall back to a paid model.', { error: clean(error?.message || error, 500) });
-    } else {
-      await setStatus(env, agentId, 'blocked', 'AI execution failed; Founder/Admin review required', 'ai_failed');
-    }
-    await audit(env, 'system', 'ai-runtime', 'ai_run_failed', 'agent', agentId, { source, model, quotaLike: isQuota, error: clean(error?.message || error, 500) });
-    throw error;
   } finally {
     // Release is token-scoped. If D1 is temporarily unavailable, do not turn an
     // otherwise successful inference into a false failure; the lease self-expires.
