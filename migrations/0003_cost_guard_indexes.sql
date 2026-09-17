@@ -1,15 +1,6 @@
--- Keep daily guardrail lookups cheap as operational history grows.
--- D1 charges by rows read/written; these indexes prevent full-history scans
--- for the queries used by AI soft-cap and scheduler guardrails.
+-- Keep scheduler guard lookups cheap without duplicating indexes from 0001.
+-- D1 counts index maintenance as writes, so V0 intentionally adds only the
+-- composite index that is missing from the base schema.
 
-CREATE INDEX IF NOT EXISTS idx_ai_usage_day
-ON ai_usage(date(ts));
-
-CREATE INDEX IF NOT EXISTS idx_activity_type_day
-ON activity_events(event_type, date(ts));
-
-CREATE INDEX IF NOT EXISTS idx_approvals_pending_created
-ON approvals(status, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_schedules_due_enabled
-ON schedules(enabled, next_run_at);
+CREATE INDEX IF NOT EXISTS idx_activity_type_ts
+ON activity_events(event_type, ts DESC);
