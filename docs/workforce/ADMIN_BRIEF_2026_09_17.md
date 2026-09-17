@@ -155,6 +155,39 @@ If no Founder decision is required, route the item to Admin/owner and keep it ou
 
 Goal: protect Founder attention as a scarce company resource.
 
+## Artifact yield checkpoint — plans vs real output
+
+Workforce does **not** treat documentation volume itself as waste. Artifact value is role-relative.
+
+Classify meaningful work into:
+1. **Decision-enabling** — resolves a real choice or conflict;
+2. **Evidence-bearing** — runtime/user/test/cost/security/legal evidence;
+3. **Implementation / handoff** — directly enables build, deploy, production or another owner action;
+4. **Strategy / plan** — useful while the decision space is still open;
+5. **Duplicate / stale / superseded** — low-yield unless preserved explicitly as history.
+
+Current checkpoint:
+- **Research:** 77 packs culminate in an explicit maintenance-mode stop. Branch history after that stop shows no later Research commit in the inspected window. Current behavior is therefore corrective, not ongoing strategy theater. Historical duplicate remains real.
+- **Growth / Content:** index explicitly says the pre-evidence operating system is complete and generic strategy must stop. Current value now depends on Founder 20, beta sessions, assets, publishing and observed behavior.
+- **Marketing:** strategy is explicitly GREEN while execution is AMBER; source says the main risk is product/measurement/asset verification, not lack of marketing ideas.
+- **Performance:** explicitly states no additional paid-strategy layer is needed; paid remains OFF until product/measurement/economic gates are real.
+- **Founder Office:** prior documentation-sprawl risk has a corrective index/anti-complexity rule; current role output is decision compression and drift detection.
+- **Web:** recent documentation is treated as implementation/release handoff because it reconciles current deploy and Brand V2 truth against stale executable instructions. This is not classified as document theater.
+- **Finance/Security:** HOLD/UNKNOWN/control artifacts can be high-yield output when they reduce material risk; throughput is not the evaluation standard.
+
+### Workforce conclusion
+
+There is **no current evidence that saturated strategy teams are continuing generic strategy production after their stop gates** in the inspected post-stop window.
+
+The larger waste risk has shifted from “too many ideas/docs” to **waiting for execution evidence**: stable runtime, measurement, real sessions, assets, deploy/smoke results and controlled activation.
+
+Do not manufacture new work to keep blocked agents busy. Route them only when a real evidence trigger appears.
+
+Once Company OS is live, replace this repository proxy with three operational measures:
+- **Artifact Yield Mix:** accepted decision/evidence/implementation artifacts vs plan/duplicate/stale artifacts, interpreted by role;
+- **Reopened Work Rate:** work reopened because source truth was stale or superseded;
+- **Founder Attention Precision:** founder escalations that produce a real decision vs total founder escalations.
+
 ## First live Workforce telemetry
 
 Once Company OS is activated, Workforce needs read-only reporting from existing records:
@@ -197,7 +230,8 @@ After live data exists, evaluate models using:
 - Research canonicalization request;
 - stop-trigger routing;
 - Admin Touch Budget experiment;
-- Founder Decision Packet format.
+- Founder Decision Packet format;
+- Artifact Yield / Reopened Work / Founder Attention Precision reporting once telemetry is live.
 
 ### Founder approval required if later proposed
 - permanent role merge/retirement;
