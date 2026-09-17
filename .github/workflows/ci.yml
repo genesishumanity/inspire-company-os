@@ -1,0 +1,30 @@
+name: company-os-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Worker syntax
+        run: |
+          node --check src/index.js
+          node --check src/ui.js
+      - name: Validate D1 migration with SQLite
+        run: |
+          sqlite3 /tmp/company-os.db < migrations/0001_init.sql
+          test "$(sqlite3 /tmp/company-os.db "select count(*) from agents;")" = "5"
+          test "$(sqlite3 /tmp/company-os.db "select count(*) from audit_log where action='registry_initialized';")" = "1"
+      - name: Verify required Company OS docs
+        run: |
+          test -f docs/COMPANY_OS_ARCHITECTURE.md
+          test -f docs/COMPANY_OS_COST_GUARDRAILS.md
+          test -f docs/COMPANY_OS_PERMISSIONS.md
+          test -f docs/COMPANY_OS_PROGRESS.md
