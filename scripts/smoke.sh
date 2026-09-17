@@ -36,15 +36,15 @@ if [ "$EST_NEURONS" -le 0 ]; then
   exit 1
 fi
 
-AI_PLAN="$(sqlite3 "$DB_FILE" "explain query plan select count(*) from ai_usage where date(ts)=date('now');")"
-if ! printf '%s' "$AI_PLAN" | grep -q 'idx_ai_usage_day'; then
-  echo "Expected daily AI guardrail query to use idx_ai_usage_day" >&2
+AI_PLAN="$(sqlite3 "$DB_FILE" "explain query plan select count(*) from ai_usage where ts >= date('now') and ts < datetime(date('now'), '+1 day');")"
+if ! printf '%s' "$AI_PLAN" | grep -q 'idx_ai_usage_ts'; then
+  echo "Expected daily AI guardrail query to use existing idx_ai_usage_ts" >&2
   exit 1
 fi
 
-ACTIVITY_PLAN="$(sqlite3 "$DB_FILE" "explain query plan select id from activity_events where event_type='schedule_guard_deferred' and date(ts)=date('now') order by id desc limit 1;")"
-if ! printf '%s' "$ACTIVITY_PLAN" | grep -q 'idx_activity_type_day'; then
-  echo "Expected scheduler guard query to use idx_activity_type_day" >&2
+ACTIVITY_PLAN="$(sqlite3 "$DB_FILE" "explain query plan select id from activity_events where event_type='schedule_guard_deferred' and ts >= date('now') and ts < datetime(date('now'), '+1 day') order by id desc limit 1;")"
+if ! printf '%s' "$ACTIVITY_PLAN" | grep -q 'idx_activity_type_ts'; then
+  echo "Expected scheduler guard query to use idx_activity_type_ts" >&2
   exit 1
 fi
 
