@@ -1,0 +1,22 @@
+name = "inspire-company-os"
+main = "src/index.js"
+compatibility_date = "2026-09-17"
+workers_dev = true
+
+[vars]
+ENVIRONMENT = "development"
+AI_MODEL = "@cf/zai-org/glm-4.7-flash"
+AI_DAILY_REQUEST_SOFT_CAP = "100"
+AI_EST_NEURONS_PER_REQUEST = "0"
+
+[[d1_databases]]
+binding = "COMPANY_OS_DB"
+database_name = "inspire-company-os-db"
+database_id = "REPLACE_WITH_COMPANY_OS_D1_ID"
+migrations_dir = "migrations"
+
+[ai]
+binding = "AI"
+
+[triggers]
+crons = ["*/15 * * * *"]
