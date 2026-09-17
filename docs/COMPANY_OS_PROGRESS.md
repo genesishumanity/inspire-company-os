@@ -27,11 +27,16 @@ Updated: 2026-09-17
 - [x] Mutation endpoints require JSON and reject browser requests marked cross-site.
 - [x] Schedules/events with bounded cron processing.
 - [x] Scheduler leases prevent duplicate execution when cron ticks overlap.
+- [x] Per-agent AI run leases prevent double-clicks, overlapping schedules, or concurrent operator requests from running the same agent twice at once.
+- [x] Agent run leases are token-scoped and self-expiring; a stale request cannot release a newer run.
+- [x] Agent-busy work defers cleanly instead of counting as an inference failure.
+- [x] Agent lease cleanup is best-effort so a transient D1 release problem does not convert a successful inference into a false AI failure; the lease expires automatically.
 - [x] Scheduler failure circuit breaker retries bounded failures and disables/escalates after 3 consecutive failures.
 - [x] Recurring cadence is anchored independently from retry timing, so late cron/quota retries do not permanently shift hourly/daily/weekly schedules.
 - [x] Missed recurring slots are skipped rather than replayed as an inference burst.
 - [x] Founder Inbox derived from real operational records.
 - [x] Founder Inbox messages can be marked read so unresolved items do not accumulate forever.
+- [x] Repeated identical pending Founder notices are deduplicated at D1 level.
 - [x] Agent detail/activity endpoint and modal.
 - [x] Audit log.
 - [x] AI usage counters plus migration-based Workers AI estimate trigger.
@@ -42,29 +47,34 @@ Updated: 2026-09-17
 - [x] No email/payment/customer-data/destructive-GitHub/prod-deploy execution adapters.
 - [x] Simple 2D CSS office UI with no fake motion/activity.
 - [x] Adaptive live polling: 8s while active, 15/30s as idle, 60s in hidden tabs.
+- [x] Bootstrap reuses already-loaded approvals/tasks when deriving Founder Inbox, eliminating duplicate high-frequency reads while preserving dedicated unread-Founder-message and AI-alert reads.
 - [x] Cloudflare Access is mandatory for **all** production routes, including `/health`.
-- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, mutation guards, truthful status, Founder-only approvals, adaptive polling, scheduler reserve/lease/circuit-breaker/cadence behavior, no-paid-fallback guardrail and production-domain configuration.
-- [x] SQLite smoke applies every migration and verifies the five-agent registry, AI usage estimate trigger, cost indexes, scheduler lease contract, cadence-anchor persistence, approval gating, approved progression, and rejected-task blocking.
+- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, mutation guards, truthful status, Founder-only approvals, adaptive polling, scheduler reserve/lease/circuit-breaker/cadence behavior, per-agent AI run leases, no-paid-fallback guardrail and production-domain configuration.
+- [x] SQLite smoke applies every migration and verifies the five-agent registry, AI usage estimate trigger, cost indexes, scheduler lease contract, per-agent lease blocking/reclaim/token-safe release, cadence-anchor persistence, approval gating, approved progression, rejected-task blocking and Founder-notice dedupe.
 - [x] Dedicated `tests/scheduler-cadence.mjs` checks late execution and missed-slot behavior for hourly/daily/weekly recurrence.
 - [x] `0003_cost_guard_indexes.sql` adds the missing cost-oriented scheduler lookup index without duplicating base indexes.
 - [x] `0004_scheduler_leases.sql` adds claim/lease/attempt/failure state for safe cron execution.
 - [x] `0005_approval_integrity.sql` adds database-level approval integrity.
 - [x] `0006_schedule_cadence_anchor.sql` separates planned recurring cadence from retry/defer timing.
+- [x] `0007_founder_notice_dedupe.sql` suppresses duplicate unresolved Founder attention notices.
+- [x] `0008_agent_run_leases.sql` adds per-agent run token, lease expiry and run-start metadata.
 - [x] Production deploy remains human-gated by `scripts/predeploy.mjs`.
 - [x] Undeployed D1 uses UUID-shaped sentinel `00000000-0000-0000-0000-000000000000`, improving local/config tooling while predeploy still blocks production until replaced with the real Company OS D1 UUID.
 - [x] CI workflow remains deploy-free.
 
 ## Validation status
 
-Repository validation was strengthened on 2026-09-17, but GitHub Actions is currently not a trustworthy pass/fail signal for this repo.
+Repository validation was strengthened again on 2026-09-17, but GitHub Actions is still not a trustworthy pass/fail signal for this repo.
 
-Repeated observed push workflow behavior:
+Latest observed push workflow after the run-lease smoke additions:
 
 - workflow: `company-os-ci`
-- result: failure before any workflow step executes
-- GitHub job metadata: `runner_id = 0`, `steps = []`
+- run: `#66`
+- conclusion: failure before any workflow step executes
+- job: `smoke`
+- job payload: `steps = null` / no executable steps reached
 
-This means runs do **not** reach checkout, npm install, smoke tests, Access tests or Wrangler dry-run. Treat this as an Actions runner/account/infrastructure blocker, not as a Company OS code test failure and not as a successful validation.
+This continues the earlier `runner_id = 0`, `steps = []` pattern. Treat these runs as an Actions runner/account/infrastructure blocker, not as a Company OS code test failure and not as successful validation.
 
 Intended local/runner validation remains:
 
@@ -113,14 +123,17 @@ After activation, authenticate through Cloudflare Access and verify:
 7. a non-Founder Access identity cannot approve/reject gated work;
 8. rejection blocks the linked task; approval allows it to progress, but executes no external action;
 9. production manual status mutation returns `manual_status_disabled`;
-10. explicit Research run shows `thinking` then `waiting` if Workers AI succeeds;
-11. one-time schedule executes only after due;
-12. overlapping cron attempts cannot execute one schedule twice during an active lease;
-13. repeated schedule failures stop after the bounded threshold and surface Founder attention;
-14. quota/retry timing does not change the planned recurring cadence;
-15. near soft-cap scheduled work remains queued/deferred rather than disappearing;
-16. `/api/audit` and `/api/usage` reflect real records;
-17. no paid external AI key is configured.
+10. explicit Research run shows `thinking` then its real task-derived state if Workers AI succeeds;
+11. a second Research run while the first agent lease is active returns a deferred/busy result and does not invoke Workers AI again;
+12. an expired agent lease can be reclaimed and a mismatched stale token cannot release the current run;
+13. one-time schedule executes only after due;
+14. overlapping cron attempts cannot execute one schedule twice during an active schedule lease;
+15. scheduled work targeting an already-running agent defers rather than incrementing the schedule failure circuit breaker;
+16. repeated schedule failures stop after the bounded threshold and surface Founder attention;
+17. quota/retry timing does not change the planned recurring cadence;
+18. near soft-cap scheduled work remains queued/deferred rather than disappearing;
+19. `/api/audit` and `/api/usage` reflect real records;
+20. no paid external AI key is configured.
 
 ## Next only after V0 is live
 
