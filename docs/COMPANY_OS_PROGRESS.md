@@ -23,13 +23,40 @@ Updated: 2026-09-17
 - [x] Founder Inbox derived from real operational records.
 - [x] Agent detail/activity endpoint and modal.
 - [x] Audit log.
-- [x] AI usage counters.
+- [x] AI usage counters plus migration-based Workers AI estimate trigger.
 - [x] Workers AI event-driven runner.
 - [x] AI soft-cap and quota/capacity graceful sleep/defer behavior.
 - [x] No paid OpenAI/Claude runtime dependency.
 - [x] No email/payment/customer-data/destructive-GitHub/prod-deploy execution adapters.
 - [x] Simple 2D CSS office UI with no fake motion/activity.
 - [x] Cloudflare Access documented as mandatory production perimeter.
+- [x] Runtime contract test checks required statuses, endpoints, Access wrapper, quota behavior, Founder approval path, schedules, no-paid-fallback guardrail and production-domain configuration.
+- [x] SQLite smoke now applies both migrations and verifies the five-agent registry plus AI usage estimate trigger.
+- [x] CI workflow now runs on `main` pushes / PRs and remains deploy-free.
+
+## Validation status
+
+Repository validation was strengthened on 2026-09-17, but GitHub Actions is currently not a trustworthy pass/fail signal for this repo.
+
+Observed workflow run after enabling push CI:
+
+- workflow: `company-os-ci`
+- event: push to `main`
+- result: failure before any workflow step executed
+- GitHub job metadata: `runner_id = 0`, `steps = []`
+
+This means the run did **not** reach checkout, npm install, smoke tests, Access tests or Wrangler dry-run. Treat it as an Actions runner/account/infrastructure blocker, not as a Company OS code test failure and not as a successful validation.
+
+Until GitHub Actions can allocate a runner, the intended validation command remains:
+
+```bash
+npm install
+npm run smoke
+node tests/auth-smoke.mjs
+npx wrangler deploy --dry-run --config wrangler.ci.toml --outdir /tmp/company-os-worker
+```
+
+No production deploy is wired into CI.
 
 ## Core repo observation
 
@@ -46,9 +73,11 @@ Required activation steps:
 3. Install dependencies: `npm install`.
 4. Apply migration: `npm run db:migrate:remote`.
 5. Create a Cloudflare Access application/policy for `ops.getinspiration.com` restricted to the Founder/authorized internal users.
-6. Deploy the separate Worker: `npm run deploy`.
-7. Map `ops.getinspiration.com` to the Company OS Worker only after Access is active.
-8. Smoke-test endpoints below.
+6. Configure the Worker Access verification values (`TEAM_DOMAIN`, `POLICY_AUD`, optional `ACCESS_ALLOWED_EMAILS`) without copying INSPIRE core secrets.
+7. Run the validation commands above.
+8. Deploy the separate Worker manually: `npm run deploy`.
+9. Map `ops.getinspiration.com` to the Company OS Worker only after Access is active.
+10. Smoke-test the live system.
 
 Do not bind the INSPIRE core D1 database or copy core production secrets into this Worker.
 
@@ -60,9 +89,9 @@ After activation:
 curl -fsS https://ops.getinspiration.com/health
 ```
 
-Expected: `{ "ok": true, "service": "inspire-company-os", ... }` after authenticating through Access.
+Expected: `{ "ok": true, "service": "inspire-company-os", ... }`.
 
-Then verify in the UI:
+Then verify in the authenticated UI:
 
 1. five seeded agents render as `sleeping`;
 2. create a message Admin -> Research: Research changes from `sleeping` to `waiting` and feed records the event;
@@ -81,5 +110,4 @@ Then verify in the UI:
 - richer agent detail timelines;
 - optional real-time transport if polling becomes insufficient;
 - more departments through registry rows, not hard-coded UI changes;
-- tighter Access/JWT verification inside the Worker if needed;
 - observed-usage-based AI budget tuning.
