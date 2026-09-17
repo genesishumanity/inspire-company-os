@@ -31,6 +31,30 @@ async function bodyJson(request) {
   }
 }
 
+function envEmails(env, key) {
+  return String(env[key] || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isFounderApprover(env, auth) {
+  if (env.AUTH_MODE === 'local') return true;
+  const allowlist = envEmails(env, 'FOUNDER_APPROVER_EMAILS');
+  if (!allowlist.length) return false;
+  return allowlist.includes(String(auth.email || '').toLowerCase());
+}
+
+function mutationGuard(request) {
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method)) return null;
+  const fetchSite = String(request.headers.get('sec-fetch-site') || '').toLowerCase();
+  if (fetchSite === 'cross-site') return json({ error: 'cross_site_mutation_blocked' }, 403);
+  if (request.method !== 'DELETE' && !String(request.headers.get('content-type') || '').toLowerCase().includes('application/json')) {
+    return json({ error: 'application_json_required' }, 415);
+  }
+  return null;
+}
+
 function retryAfterMidnightUtc() {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -112,10 +136,48 @@ async function addAgent(request, env, actor) {
   return json({ id, name, department, status: 'sleeping' }, 201);
 }
 
+async function approvalGateForTask(request, env, path) {
+  const match = path.match(/^\/api\/tasks\/(\d+)$/);
+  if (request.method !== 'PATCH' || !match) return null;
+  const payload = await bodyJson(request.clone());
+  if (!['in_progress', 'review', 'done'].includes(payload.status)) return null;
+
+  const task = await env.COMPANY_OS_DB.prepare(
+    `SELECT t.approval_required, t.approval_id, a.status AS approval_status
+     FROM tasks t LEFT JOIN approvals a ON a.id=t.approval_id
+     WHERE t.id=?`
+  ).bind(Number(match[1])).first();
+
+  if (!task) return null;
+  if (Number(task.approval_required || 0) === 1 && task.approval_status !== 'approved') {
+    return json({ error: 'founder_approval_required', approval_id: task.approval_id || null }, 409);
+  }
+  return null;
+}
+
 async function securedFetch(request, env, ctx) {
   const url = new URL(request.url);
   const auth = await authorizeRequest(request, env);
   if (!auth.ok) return json({ error: auth.error }, auth.status || 403);
+
+  const mutationBlocked = mutationGuard(request);
+  if (mutationBlocked) return mutationBlocked;
+
+  // Status is operational truth, not a cosmetic control. In production it may only
+  // change through real task/message/AI/scheduler events.
+  if (request.method === 'PATCH' && /^\/api\/agents\/[a-z0-9-]+\/status$/.test(url.pathname) && env.AUTH_MODE !== 'local') {
+    return json({ error: 'manual_status_disabled' }, 405);
+  }
+
+  // Approval decisions are Founder-only. Missing production configuration fails closed.
+  if (request.method === 'PATCH' && /^\/api\/approvals\/\d+$/.test(url.pathname)) {
+    const approvers = envEmails(env, 'FOUNDER_APPROVER_EMAILS');
+    if (env.AUTH_MODE !== 'local' && !approvers.length) return json({ error: 'founder_approvers_not_configured' }, 503);
+    if (!isFounderApprover(env, auth)) return json({ error: 'founder_approval_forbidden' }, 403);
+  }
+
+  const taskApprovalBlocked = await approvalGateForTask(request, env, url.pathname);
+  if (taskApprovalBlocked) return taskApprovalBlocked;
 
   const headers = new Headers(request.headers);
   headers.set('Cf-Access-Authenticated-User-Email', auth.email || auth.subject || 'access-user');
