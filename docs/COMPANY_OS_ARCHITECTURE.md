@@ -27,23 +27,32 @@ src/entry.js
   - checks Access audience/issuer
   - optional email allowlist
   - graceful D1/AI quota response
+  - cron AI headroom guard
         |
-        v
-src/index.js
-  |       |        |
-  |       |        +--> Workers AI (event-triggered only)
-  |       |
-  |       +-----------> Cron (15 min due-event check)
-  |
-  +-------------------> COMPANY_OS_DB (D1)
-                           agents
-                           activity_events
-                           messages
-                           tasks
-                           approvals
-                           schedules
-                           audit_log
-                           ai_usage
+        +------------------------------+
+        v                              v
+src/index.js                    src/scheduler.js
+  - UI/API                      - due schedule scan
+  - registry/status             - atomic claim + lease
+  - tasks/messages              - bounded retries
+  - approvals                   - circuit breaker
+  - explicit AI runs            - Founder escalation
+        |                              |
+        +--------------+---------------+
+                       v
+                COMPANY_OS_DB (D1)
+                  agents
+                  activity_events
+                  messages
+                  tasks
+                  approvals
+                  schedules
+                  audit_log
+                  ai_usage
+                       |
+                       v
+               Workers AI binding
+             (event-triggered only)
 ```
 
 ## Why D1 for V0
@@ -55,7 +64,7 @@ D1 is the simplest fit for a small internal operating system: relational entitie
 Agents do not infer while idle. An AI run can happen only from:
 
 1. explicit `POST /api/agents/:id/run`, or
-2. a due schedule processed by cron.
+2. a due schedule claimed by the cron scheduler.
 
 Agent-to-agent messages create real backend events and can wake a sleeping recipient to `waiting`, but they do **not** auto-run the recipient. This blocks accidental model loops and silent quota burn.
 
@@ -65,7 +74,7 @@ Allowed states: `working`, `thinking`, `waiting`, `blocked`, `reviewing`, `sleep
 
 Representative transitions:
 
-- explicit AI run: `thinking` -> `waiting`
+- explicit/scheduled AI run: `thinking` -> `waiting`
 - task `in_progress`: `working`
 - task `blocked`: `blocked`
 - task `review`: `reviewing`
@@ -84,31 +93,33 @@ Runtime role/permission mutation is intentionally not exposed in V0. Changing an
 
 ## UI
 
-The office is deliberately simple CSS. Desk/card positions are static; there is no fake walking, typing, pulsing or synthetic activity. The visible UI polls `/api/bootstrap` every 8 seconds and slows to 30 seconds while hidden. Polling does not invoke AI.
+The office is deliberately simple CSS. Desk/card positions are static; there is no fake walking, typing or synthetic activity. `/api/bootstrap` polling is adaptive: 8 seconds while changes are active, then 15/30 seconds as the office becomes idle, and 60 seconds while the tab is hidden. Polling does not invoke AI or create heartbeat writes.
 
-V0 views include office/registry, live activity, Founder Inbox, shared tasks, agent messages, approvals, schedules, per-agent activity, audit-backed state and AI usage counters.
+V0 views include office/registry, live activity, Founder Inbox, shared tasks, agent messages, approvals, schedules, per-agent activity and AI usage counters. Founder Inbox messages can be marked read to keep the decision surface clean.
 
 ## Founder Inbox
 
-Founder Inbox is computed from pending approvals, blocked tasks, unread messages addressed to `founder-office`, and AI quota/defer/failure events. It does not duplicate facts into another table.
+Founder Inbox is computed from pending approvals, blocked tasks, unread messages addressed to `founder-office`, and AI quota/defer/failure events. It does not duplicate those facts into a second inbox table.
 
 ## Schedules
 
-A single cron trigger runs every 15 minutes, fetches only due enabled schedules and processes at most three. If nothing is due, no inference runs. Recurrence types: `once`, `hourly`, `daily`, `weekly`.
+A single cron trigger runs every 15 minutes. The secure entry layer first reserves enough daily AI headroom for the bounded cron batch. `src/scheduler.js` then scans a small due candidate set and executes at most three schedules per tick.
+
+Each due schedule is claimed atomically with a claim token and a 10-minute lease. Overlapping cron invocations cannot claim the same active lease. Quota/capacity deferrals preserve the schedule for a later retry; ordinary failures use bounded backoff. After three consecutive non-quota failures, the schedule is disabled and Founder attention is inserted instead of burning resources forever.
+
+Recurrence types remain `once`, `hourly`, `daily`, `weekly`.
 
 ## Security exposure
 
 `workers_dev=false` and `preview_urls=false`. The intended route is only `ops.getinspiration.com`.
 
-The secure entry layer validates Cloudflare Access' `Cf-Access-Jwt-Assertion` JWT using the configured `TEAM_DOMAIN` issuer and `POLICY_AUD` audience. If Access variables are absent, protected routes fail closed. Local auth bypass works only with `AUTH_MODE=local` **and** a localhost/loopback hostname.
-
-`GET /health` is intentionally unauthenticated and returns only service liveness; it does not read D1 or expose company data. All UI and `/api/*` paths require valid Access authentication.
+The secure entry layer validates Cloudflare Access' `Cf-Access-Jwt-Assertion` JWT using the configured `TEAM_DOMAIN` issuer and `POLICY_AUD` audience. If Access variables are absent or invalid, **every production route fails closed, including `/health`**. Local auth bypass works only with `AUTH_MODE=local` and a localhost/loopback hostname.
 
 The UI uses same-origin requests and restrictive CSP/security headers. No third-party frontend scripts are required.
 
 ## API surface
 
-- `GET /health`
+- `GET /health` — authenticated liveness
 - `GET /api/bootstrap`
 - `GET /api/agents`
 - `POST /api/agents` — add registry agent
