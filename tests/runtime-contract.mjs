@@ -6,6 +6,7 @@ const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
 const approvalIntegrity = fs.readFileSync('migrations/0005_approval_integrity.sql', 'utf8');
 const cadenceIntegrity = fs.readFileSync('migrations/0006_schedule_cadence_anchor.sql', 'utf8');
 const founderNoticeDedupe = fs.readFileSync('migrations/0007_founder_notice_dedupe.sql', 'utf8');
+const agentRunLeases = fs.readFileSync('migrations/0008_agent_run_leases.sql', 'utf8');
 const ui = fs.readFileSync('src/ui.js', 'utf8');
 const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
 
@@ -73,6 +74,14 @@ expect(cadenceIntegrity, /cadence_anchor_at/, 'database cadence anchor');
 expect(cadenceIntegrity, /trg_schedule_cadence_anchor_after_insert/, 'new schedules receive cadence anchor');
 expect(founderNoticeDedupe, /trg_dedupe_pending_founder_attention/, 'pending Founder alert dedupe');
 expect(founderNoticeDedupe, /RAISE\(IGNORE\)/, 'duplicate Founder alert fails quietly without breaking work');
+expect(agentRunLeases, /run_token/, 'database agent run token');
+expect(agentRunLeases, /run_lease_until/, 'database agent run lease expiry');
+expect(agentRunLeases, /last_run_started_at/, 'database agent run start timestamp');
+expect(index, /AGENT_RUN_LEASE_MINUTES = 10/, 'bounded agent run lease');
+expect(index, /claimAgentRun/, 'atomic agent run claim');
+expect(index, /run_lease_until/, 'agent run lease expiry runtime');
+expect(index, /run_token=\?/, 'token-scoped agent run lease release');
+expect(index, /reason:'agent_busy'/, 'concurrent agent work defers instead of double-running');
 
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
