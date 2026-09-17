@@ -18,12 +18,22 @@ function nextUtcReset() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 5, 0)).toISOString();
 }
 
-function nextRecurringTime(recurrence) {
-  const next = new Date();
-  if (recurrence === 'hourly') next.setUTCHours(next.getUTCHours() + 1);
-  if (recurrence === 'daily') next.setUTCDate(next.getUTCDate() + 1);
-  if (recurrence === 'weekly') next.setUTCDate(next.getUTCDate() + 7);
-  return next.toISOString();
+export function nextRecurringTime(recurrence, scheduledAt, nowMs = Date.now()) {
+  const periods = {
+    hourly: 60 * 60_000,
+    daily: 24 * 60 * 60_000,
+    weekly: 7 * 24 * 60 * 60_000,
+  };
+  const periodMs = periods[recurrence];
+  const scheduledMs = new Date(scheduledAt).getTime();
+  if (!periodMs || Number.isNaN(scheduledMs)) throw new Error('invalid_recurring_schedule');
+
+  // Anchor recurrence to the originally scheduled slot, not the time the cron
+  // happened to execute. If the Worker was late/offline, skip missed slots and
+  // pick the first future slot instead of permanently drifting the cadence.
+  if (scheduledMs > nowMs) return new Date(scheduledMs).toISOString();
+  const elapsedSlots = Math.floor((nowMs - scheduledMs) / periodMs) + 1;
+  return new Date(scheduledMs + elapsedSlots * periodMs).toISOString();
 }
 
 function quotaLike(value) {
@@ -82,6 +92,7 @@ async function runInternalAgent(env, schedule) {
 }
 
 async function finishSuccess(env, schedule) {
+  let nextRunAt = null;
   if (schedule.recurrence === 'once') {
     await env.COMPANY_OS_DB.prepare(
       `UPDATE schedules
@@ -90,19 +101,23 @@ async function finishSuccess(env, schedule) {
        WHERE id=? AND claim_token=?`
     ).bind(schedule.id, schedule.claim_token).run();
   } else {
+    nextRunAt = nextRecurringTime(schedule.recurrence, schedule.next_run_at);
     await env.COMPANY_OS_DB.prepare(
       `UPDATE schedules
        SET last_run_at=CURRENT_TIMESTAMP,next_run_at=?,claim_token=NULL,lease_until=NULL,
            consecutive_failures=0,last_error=NULL,updated_at=CURRENT_TIMESTAMP
        WHERE id=? AND claim_token=?`
-    ).bind(nextRecurringTime(schedule.recurrence), schedule.id, schedule.claim_token).run();
+    ).bind(nextRunAt, schedule.id, schedule.claim_token).run();
   }
 
-  await activity(env, schedule.agent_id, 'schedule_completed', `${schedule.title} completed`, {
+  const details = {
     scheduleId: schedule.id,
     recurrence: schedule.recurrence,
-  }, schedule.id);
-  await audit(env, 'schedule_completed', schedule.id, { recurrence: schedule.recurrence });
+    scheduledFrom: schedule.next_run_at,
+    nextRunAt,
+  };
+  await activity(env, schedule.agent_id, 'schedule_completed', `${schedule.title} completed`, details, schedule.id);
+  await audit(env, 'schedule_completed', schedule.id, details);
 }
 
 async function deferSchedule(env, schedule, reason, retryAt) {
