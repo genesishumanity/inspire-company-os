@@ -257,6 +257,34 @@ Admin brief update commit:
 
 No prompts, permissions, registry, model assignments, product code, specialist source-of-truth or deploy configuration were changed.
 
+## 2026-09-17 — Shared critical-path activation review
+
+### Action 25 — Identified the highest-leverage workforce unblock path
+
+Reviewed current `LAUNCH_STATUS.md` against the blocked dependencies already documented by Web, Security, Marketing, Growth and Performance.
+
+Current shared unlock path:
+
+`real core-product D1 binding/config → controlled production deploy → real Gemini + D1 end-to-end smoke → trustworthy runtime evidence`
+
+Decision: this path currently unlocks the widest set of real downstream work across Web/Infrastructure, Security, Marketing, Growth, Performance, Launch/QA and later Sales. Do not replace it with additional generic strategy work.
+
+### Action 26 — Prevented Workforce observability from becoming an execution tax
+
+Previous Workforce priority language could be read as putting Company OS telemetry activation ahead of the launch-critical product runtime path.
+
+Decision:
+- Company OS activation remains P0 for Workforce observability;
+- if the same scarce Admin/Infrastructure owner is required, core product D1/deploy/smoke takes precedence;
+- Company OS D1/Access activation should run in parallel only when it does not delay launch-critical product work, otherwise immediately after the release-critical path stabilizes.
+
+Updated `ADMIN_BRIEF_2026_09_17.md` with the critical-path activation map and corrected sequencing.
+
+Admin brief update commit:
+- `3d8b91d0cb02183d7f3c67210cd039f42fa6e175`
+
+No role, permission, registry, model, product-code, deployment-config or specialist-source mutation was made by Workforce.
+
 ## Next log entry trigger
 
 Append only when Workforce performs a meaningful new audit/recommendation/action. Do not generate heartbeat/noise entries.
