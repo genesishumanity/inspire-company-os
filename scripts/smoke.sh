@@ -67,6 +67,35 @@ if [ "$LEASE_INDEX" != "1" ]; then
   exit 1
 fi
 
+# Approval integrity: gated work cannot progress before approval, and rejection
+# automatically blocks the linked task.
+sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,status) values('admin','restricted_action','approval smoke','pending');"
+APPROVAL_ID="$(sqlite3 "$DB_FILE" "select max(id) from approvals;")"
+sqlite3 "$DB_FILE" "insert into tasks(title,owner_agent_id,created_by_agent_id,approval_required,approval_id) values('approval gated smoke','marketing','admin',1,$APPROVAL_ID);"
+TASK_ID="$(sqlite3 "$DB_FILE" "select max(id) from tasks;")"
+if sqlite3 "$DB_FILE" "update tasks set status='in_progress' where id=$TASK_ID;" >/dev/null 2>&1; then
+  echo "Approval-gated task progressed before approval" >&2
+  exit 1
+fi
+sqlite3 "$DB_FILE" "update approvals set status='approved' where id=$APPROVAL_ID;"
+sqlite3 "$DB_FILE" "update tasks set status='in_progress' where id=$TASK_ID;"
+TASK_STATUS="$(sqlite3 "$DB_FILE" "select status from tasks where id=$TASK_ID;")"
+if [ "$TASK_STATUS" != "in_progress" ]; then
+  echo "Approved task could not progress" >&2
+  exit 1
+fi
+
+sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,status) values('admin','restricted_action','rejection smoke','pending');"
+REJECT_APPROVAL_ID="$(sqlite3 "$DB_FILE" "select max(id) from approvals;")"
+sqlite3 "$DB_FILE" "insert into tasks(title,owner_agent_id,created_by_agent_id,approval_required,approval_id) values('rejected smoke','finance','admin',1,$REJECT_APPROVAL_ID);"
+REJECT_TASK_ID="$(sqlite3 "$DB_FILE" "select max(id) from tasks;")"
+sqlite3 "$DB_FILE" "update approvals set status='rejected' where id=$REJECT_APPROVAL_ID;"
+REJECT_STATUS="$(sqlite3 "$DB_FILE" "select status from tasks where id=$REJECT_TASK_ID;")"
+if [ "$REJECT_STATUS" != "blocked" ]; then
+  echo "Rejected approval did not block linked task" >&2
+  exit 1
+fi
+
 grep -q '^workers_dev = false$' wrangler.toml
 grep -q '^preview_urls = false$' wrangler.toml
 grep -q '^main = "src/entry.js"$' wrangler.toml
