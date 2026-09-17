@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-node --check src/index.js
-node --check src/ui.js
+npm run check
 
 DB_FILE="${TMPDIR:-/tmp}/inspire-company-os-smoke.db"
 rm -f "$DB_FILE"
@@ -20,5 +19,10 @@ if [ "$INIT_AUDIT_COUNT" != "1" ]; then
   echo "Expected one registry_initialized audit row, got $INIT_AUDIT_COUNT" >&2
   exit 1
 fi
+
+grep -q '^workers_dev = false$' wrangler.toml
+grep -q '^preview_urls = false$' wrangler.toml
+grep -q '^main = "src/entry.js"$' wrangler.toml
+grep -q '^AUTH_MODE = "access"$' wrangler.toml
 
 echo "Company OS smoke checks passed."
