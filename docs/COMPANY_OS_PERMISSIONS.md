@@ -48,9 +48,9 @@ Production is fail-closed:
 1. Cloudflare Access must protect `ops.getinspiration.com`.
 2. `src/entry.js` independently validates `Cf-Access-Jwt-Assertion` against `TEAM_DOMAIN` and `POLICY_AUD` using Cloudflare's published JWKS.
 3. `ACCESS_ALLOWED_EMAILS` may additionally restrict identities after JWT validation.
-4. If Access configuration is missing or invalid, UI/API requests are rejected.
+4. If Access configuration is missing or invalid, every UI/API route is rejected, including `/health`.
 5. `workers.dev` and Worker preview URLs are disabled.
-6. `/health` is the only intentionally unauthenticated route and exposes liveness only.
+6. No intentionally unauthenticated production route exists in V0.
 
 The `Cf-Access-Authenticated-User-Email` value used in audit metadata is overwritten at the secure entry layer with the identity derived from the validated JWT rather than trusted directly from an incoming public header.
 
