@@ -14,10 +14,11 @@ V0 follows least privilege. Agents can propose work and update internal Company 
 | Request Founder approval | yes | yes | allowed |
 | Decide Founder approval | no | Founder allowlist only | `FOUNDER_APPROVER_EMAILS` required in production |
 | Create schedule for internal AI work | trusted internal flow | yes | allowed |
-| Run Workers AI for role work | event-triggered | yes | allowed within guardrails |
+| Run Workers AI for role work | event-triggered | yes | allowed within guardrails; one concurrent run per agent |
 | Add a new registry agent | no autonomous self-expansion | yes | `POST /api/agents` |
 | Manually set cosmetic agent status | no | no in production | blocked; status must come from real backend events |
 | Change an existing agent's role prompt/permissions | no | reviewed human code/config change | no runtime endpoint |
+| Use a non-human/service token as a Company OS operator | no | no | rejected; V0 requires a validated human Access email claim |
 | Send external email | no | no runtime adapter | approval queue only / future |
 | Charge/refund/payment action | no | no runtime adapter | approval queue only / future |
 | Customer-data automation | no | no runtime adapter | approval queue only / future |
@@ -44,6 +45,12 @@ Approval integrity is enforced twice:
 
 A rejected approval automatically moves its linked task to `blocked`. Production approval decisions require a validated Cloudflare Access identity whose email is listed in `FOUNDER_APPROVER_EMAILS`. If that allowlist is missing, approval decisions fail closed.
 
+## AI concurrency permission
+
+An agent may have only one active inference lease at a time. Before Workers AI is invoked, `src/index.js` atomically claims that agent's `run_token` and short `run_lease_until`. A double-click, overlapping schedule, or concurrent operator request for the same agent is returned as `agent_busy` and deferred instead of starting a second inference. Lease release requires the matching token; stale work cannot unlock a newer run, and a crashed Worker cannot hold the lease forever because it expires automatically.
+
+This is both a correctness boundary and a cost boundary: concurrency does not silently multiply inference consumption for the same agent.
+
 ## Status truth
 
 The office UI is an operational view, not animation. Production requests cannot manually set an agent to `working`, `thinking`, `reviewing`, etc. Status changes come from real backend events such as task assignment/state, message delivery, AI execution, scheduler execution, quota sleep, or a real failure/blocker. Local development may use the manual endpoint for testing only.
@@ -62,13 +69,14 @@ Never write secrets, credentials, Access JWTs, API keys or model chain-of-though
 
 Production is fail-closed:
 
-1. Cloudflare Access must protect `ops.getinspiration.com`.
+1. Cloudflare Access must protect `ops.getinspiration.com`. When configuring Access, prefer coverage that protects the Worker across its production custom-domain exposure where available; at minimum the exact `ops.getinspiration.com` application must be protected before the route is considered live.
 2. `src/entry.js` independently validates `Cf-Access-Jwt-Assertion` against `TEAM_DOMAIN` and `POLICY_AUD` using Cloudflare's published JWKS.
-3. `ACCESS_ALLOWED_EMAILS` may additionally restrict identities after JWT validation.
-4. `FOUNDER_APPROVER_EMAILS` separately controls who may approve/reject Founder-gated actions.
-5. If Access configuration is missing or invalid, every UI/API route is rejected, including `/health`.
-6. `workers.dev` and Worker preview URLs are disabled.
-7. No intentionally unauthenticated production route exists in V0.
+3. After JWT validation, V0 requires a signed human `email` claim. A service-token/non-human application token without a human email is rejected with `access_human_identity_required`, even if an Access policy is accidentally broadened later.
+4. `ACCESS_ALLOWED_EMAILS` may additionally restrict human identities after JWT validation.
+5. `FOUNDER_APPROVER_EMAILS` separately controls which validated human identities may approve/reject Founder-gated actions.
+6. If Access configuration is missing or invalid, every UI/API route is rejected, including `/health`.
+7. `workers.dev` and Worker preview URLs are disabled.
+8. No intentionally unauthenticated production route exists in V0.
 
 The `Cf-Access-Authenticated-User-Email` value used in audit metadata is overwritten at the secure entry layer with the identity derived from the validated JWT rather than trusted directly from an incoming public header.
 
