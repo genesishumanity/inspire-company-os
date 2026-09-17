@@ -176,6 +176,54 @@ The report adds no autonomous structural change. It proposes three optimizations
 2. enforce stop-trigger task assignment after strategy saturation;
 3. make source freshness/supersession mechanical.
 
+## 2026-09-17 — Freshness self-audit and optimization cycle
+
+### Action 18 — Revalidated latest Company OS main
+
+Observed additional repository hardening after the baseline branch was created:
+- atomic AI budget reservation;
+- conservative scheduler reserve accounting;
+- agent-busy short retry behavior;
+- human-only Access identity hardening;
+- duplicate-run / run-lease protections;
+- stronger runtime contract coverage.
+
+Decision: cost/control design has improved, but live workforce performance remains `NOT OBSERVABLE` because production activation still requires dedicated D1 + Access + controlled deploy + authenticated smoke evidence.
+
+### Action 19 — Revalidated latest core operational branch
+
+Confirmed `genesishumanity/inspire-` active operational branch `feat/mvp-foundation` advanced to commit `196ab0c1b0819cfe48300b88517aeecaa17489ac` with Web documentation reconciliation against current launch and Brand V2 truth.
+
+Decision: earlier source-drift risk is receiving corrective work. Do not claim global drift is solved; measure reopened/stale-source incidents after live telemetry exists.
+
+### Action 20 — Detected Workforce's own stale classification
+
+Found that `ADMIN_BRIEF_2026_09_17.md` still listed Admin as `HEALTHY + BLOCKED` even though the later equal-standard audit had reclassified Admin as `NEEDS ROLE CLARITY + STRUCTURAL OVERLOAD RISK`.
+
+Decision: Workforce must obey the same source-freshness standard it recommends to other agents. Updated the existing Admin brief rather than creating another parallel correction document.
+
+Updated file commit:
+- `fcec8a80f12e283394f81723dd12fdbf1da6e1b7`
+
+### Action 21 — Added three operating optimization proposals
+
+Added to the refreshed Admin brief for Admin review only:
+1. **Admin Touch Budget** — default `Admin not required`; require Admin only for release/runtime, source conflict, control conflict, or implementation/deploy ownership;
+2. **Evidence Expiry / Supersession header** — machine-readable `CURRENT / SUPERSEDED / HISTORICAL` freshness metadata for release-relevant executable docs;
+3. **Founder Decision Packet** — Founder receives decision/why-now/options/default/deadline/evidence instead of raw status chatter.
+
+Decision: these are proposals only. Workforce did not change prompts, permissions, registry, models or runtime behavior.
+
+### Action 22 — Checked Workforce PR freshness
+
+Compared `workforce/baseline-2026-09-17` to Company OS `main` and found the branches have diverged because product hardening continued concurrently.
+
+Decision:
+- keep PR #2 open and unmerged;
+- do not present the Workforce branch as runtime validation;
+- Admin should review against latest `main` before merge;
+- Workforce will continue documentation-only updates without autonomously merging product/runtime changes into its branch.
+
 ## Next log entry trigger
 
 Append only when Workforce performs a meaningful new audit/recommendation/action. Do not generate heartbeat/noise entries.
