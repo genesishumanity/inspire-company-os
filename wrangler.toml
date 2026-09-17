@@ -18,7 +18,8 @@ custom_domain = true
 [[d1_databases]]
 binding = "COMPANY_OS_DB"
 database_name = "inspire-company-os-db"
-database_id = "REPLACE_WITH_COMPANY_OS_D1_ID"
+# UUID-shaped sentinel: valid config shape for local tooling, explicitly blocked by predeploy.
+database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
 [ai]
