@@ -108,7 +108,7 @@ async function createFounderNotice(env, requestedBy, title, rationale, payload =
     `INSERT INTO approvals (requested_by_agent_id, action_type, title, rationale, payload_json)
      VALUES (?, 'founder_attention', ?, ?, ?)`
   ).bind(requestedBy || null, clean(title, 500), clean(rationale, 3000), JSON.stringify(payload)).run();
-  return result.meta.last_row_id;
+  return result?.meta?.last_row_id || null;
 }
 
 export async function runAgent(env, agentId, instruction, context = '', source = 'api') {
@@ -181,7 +181,7 @@ async function founderInbox(env) {
     env.COMPANY_OS_DB.prepare(`SELECT a.*, ag.name AS agent_name FROM approvals a LEFT JOIN agents ag ON ag.id=a.requested_by_agent_id WHERE a.status='pending' ORDER BY a.created_at DESC LIMIT 30`).all(),
     env.COMPANY_OS_DB.prepare(`SELECT t.*, ag.name AS owner_name FROM tasks t LEFT JOIN agents ag ON ag.id=t.owner_agent_id WHERE t.status='blocked' ORDER BY t.updated_at DESC LIMIT 20`).all(),
     env.COMPANY_OS_DB.prepare(`SELECT m.*, s.name AS sender_name FROM messages m LEFT JOIN agents s ON s.id=m.sender_agent_id WHERE m.recipient_agent_id='founder-office' AND m.status!='read' ORDER BY m.created_at DESC LIMIT 20`).all(),
-    env.COMPANY_OS_DB.prepare(`SELECT * FROM activity_events WHERE event_type IN ('ai_quota_sleep','ai_deferred','ai_failed') ORDER BY ts DESC LIMIT 20`).all(),
+    env.COMPANY_OS_DB.prepare(`SELECT * FROM activity_events WHERE event_type IN ('ai_quota_sleep','ai_deferred','ai_failed','schedule_guard_deferred','schedule_deferred','schedule_blocked') ORDER BY ts DESC LIMIT 20`).all(),
   ]);
   return { approvals: approvals.results || [], blockedTasks: blocked.results || [], unreadFounderMessages: messages.results || [], aiAlerts: quota.results || [] };
 }
@@ -375,11 +375,12 @@ async function route(request, env) {
     const nextRun = new Date(payload.next_run_at);
     if (!agentId || !title || !instruction || Number.isNaN(nextRun.getTime())) return json({ error: 'agent_title_instruction_next_run_required' }, 400);
     if (!(await getAgent(env, agentId))) return json({ error: 'agent_not_found' }, 404);
+    const nextRunIso = nextRun.toISOString();
     const inserted = await env.COMPANY_OS_DB.prepare(
-      `INSERT INTO schedules (agent_id,title,instruction,recurrence,next_run_at) VALUES (?,?,?,?,?)`
-    ).bind(agentId, title, instruction, recurrence, nextRun.toISOString()).run();
+      `INSERT INTO schedules (agent_id,title,instruction,recurrence,next_run_at,cadence_anchor_at) VALUES (?,?,?,?,?,?)`
+    ).bind(agentId, title, instruction, recurrence, nextRunIso, nextRunIso).run();
     const id = inserted.meta.last_row_id;
-    await activity(env, agentId, 'schedule_created', title, { scheduleId: id, recurrence, nextRunAt: nextRun.toISOString() }, 'schedule', id);
+    await activity(env, agentId, 'schedule_created', title, { scheduleId: id, recurrence, nextRunAt: nextRunIso }, 'schedule', id);
     await audit(env, 'human', actorFrom(request), 'schedule_created', 'schedule', id, { agentId, recurrence });
     return json({ id }, 201);
   }
@@ -404,7 +405,11 @@ export default {
       return await route(request, env);
     } catch (error) {
       const code = error?.message || 'internal_error';
-      const status = code === 'invalid_json' || code === 'request_too_large' || code.endsWith('_required') || code === 'invalid_status' ? 400 : code === 'agent_not_found' ? 404 : 500;
+      const status = code === 'invalid_json' || code === 'request_too_large' || code.endsWith('_required') || code === 'invalid_status' ? 400
+        : code === 'agent_not_found' ? 404
+        : code === 'approval_not_granted' ? 409
+        : code === 'approval_link_required' ? 400
+        : 500;
       return json({ error: code, detail: status === 500 ? 'See audit/activity logs for operational detail.' : undefined }, status);
     }
   },
