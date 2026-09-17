@@ -112,7 +112,7 @@ expect(ui, /nextDelay\(\)/, 'adaptive live polling');
 expect(ui, /data-read/, 'Founder Inbox read hygiene');
 expect(wrangler, /workers_dev = false/, 'workers.dev disabled');
 expect(wrangler, /preview_urls = false/, 'preview URLs disabled');
-expect(wrangler, /ops\.getinspiration\.com/, 'ops custom domain');
+expect(wrangler, /ops\.getinspration\.com/, 'ops custom domain');
 expect(wrangler, /00000000-0000-0000-0000-000000000000/, 'production D1 requires explicit activation');
 
 console.log('Company OS runtime contract checks passed.');
