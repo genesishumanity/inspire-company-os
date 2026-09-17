@@ -71,7 +71,7 @@ grep -q '^workers_dev = false$' wrangler.toml
 grep -q '^preview_urls = false$' wrangler.toml
 grep -q '^main = "src/entry.js"$' wrangler.toml
 grep -q '^AUTH_MODE = "access"$' wrangler.toml
-grep -q 'REPLACE_WITH_COMPANY_OS_D1_ID' wrangler.toml
+grep -q '00000000-0000-0000-0000-000000000000' wrangler.toml
 ! grep -q "url.pathname === '/health'.*return app.fetch" src/entry.js
 
 echo "Company OS smoke checks passed."
