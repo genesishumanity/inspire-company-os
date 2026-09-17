@@ -1,4 +1,4 @@
-import app from './index.js';
+import { runAgent } from './index.js';
 
 const MAX_RUNS_PER_TICK = 3;
 const CANDIDATE_SCAN = 6;
@@ -71,24 +71,6 @@ async function claimSchedule(env, id) {
   return env.COMPANY_OS_DB.prepare(
     `SELECT * FROM schedules WHERE id=? AND claim_token=?`
   ).bind(id, token).first();
-}
-
-async function runInternalAgent(env, schedule) {
-  const request = new Request(`https://company-os.internal/api/agents/${encodeURIComponent(schedule.agent_id)}/run`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'Cf-Access-Authenticated-User-Email': 'scheduler@internal',
-    },
-    body: JSON.stringify({
-      instruction: schedule.instruction,
-      context: `Scheduled event: ${schedule.title}`,
-    }),
-  });
-
-  const response = await app.fetch(request, env, { waitUntil() {} });
-  const payload = await response.json().catch(() => ({}));
-  return { response, payload };
 }
 
 async function finishSuccess(env, schedule) {
@@ -195,21 +177,18 @@ export async function runDueSchedules(env) {
         attemptCount: schedule.attempt_count,
       }, schedule.id);
 
-      const { response, payload } = await runInternalAgent(env, schedule);
-      if (response.status === 202 || payload?.deferred) {
-        const reason = payload?.reason || 'ai_deferred';
+      const result = await runAgent(
+        env,
+        schedule.agent_id,
+        schedule.instruction,
+        `Scheduled event: ${schedule.title}`,
+        'schedule',
+      );
+
+      if (result?.deferred) {
+        const reason = result.reason || 'ai_deferred';
         const retryAt = reason === 'daily_soft_cap' ? nextUtcReset() : isoAfterMinutes(15);
         await deferSchedule(env, schedule, reason, retryAt);
-        continue;
-      }
-
-      if (!response.ok) {
-        const reason = payload?.error || `agent_run_http_${response.status}`;
-        if (quotaLike(reason)) {
-          await deferSchedule(env, schedule, reason, isoAfterMinutes(15));
-        } else {
-          await failSchedule(env, schedule, reason);
-        }
         continue;
       }
 
