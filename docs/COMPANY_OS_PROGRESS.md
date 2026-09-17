@@ -20,6 +20,8 @@ Updated: 2026-09-17
 - [x] Shared tasks.
 - [x] Founder approval queue.
 - [x] Schedules/events with bounded cron processing.
+- [x] Scheduler leases prevent duplicate execution when cron ticks overlap.
+- [x] Scheduler failure circuit breaker retries bounded failures and disables/escalates after 3 consecutive failures.
 - [x] Founder Inbox derived from real operational records.
 - [x] Founder Inbox messages can be marked read so unresolved items do not accumulate forever.
 - [x] Agent detail/activity endpoint and modal.
@@ -33,10 +35,12 @@ Updated: 2026-09-17
 - [x] Simple 2D CSS office UI with no fake motion/activity.
 - [x] Adaptive live polling: 8s while active, 15/30s as idle, 60s in hidden tabs.
 - [x] Cloudflare Access is mandatory for **all** production routes, including `/health`.
-- [x] Runtime contract test checks statuses, endpoints, Access wrapper, no public health bypass, quota behavior, scheduler reserve, Founder approval path, no-paid-fallback guardrail and production-domain configuration.
-- [x] SQLite smoke applies every migration, verifies the five-agent registry, AI usage estimate trigger and daily-query cost indexes.
-- [x] `0003_cost_guard_indexes.sql` protects daily AI/scheduler guard queries from full-history scans as data grows.
-- [x] Production deploy remains human-gated by `scripts/predeploy.mjs` and cannot run while the D1 ID is a placeholder.
+- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, adaptive polling, scheduler reserve/lease/circuit-breaker behavior, Founder approval path, no-paid-fallback guardrail and production-domain configuration.
+- [x] SQLite smoke applies every migration, verifies the five-agent registry, AI usage estimate trigger, cost indexes and scheduler lease contract.
+- [x] `0003_cost_guard_indexes.sql` adds cost-oriented lookup indexes.
+- [x] `0004_scheduler_leases.sql` adds claim/lease/attempt/failure state for safe cron execution.
+- [x] Production deploy remains human-gated by `scripts/predeploy.mjs`.
+- [x] Undeployed D1 uses UUID-shaped sentinel `00000000-0000-0000-0000-000000000000`, improving local/config tooling while predeploy still blocks production until replaced with the real Company OS D1 UUID.
 - [x] CI workflow remains deploy-free.
 
 ## Validation status
@@ -73,7 +77,7 @@ The repository side is prepared. A live end-to-end deployment now requires Cloud
 Required activation steps:
 
 1. In the same Cloudflare account, create a new **separate** D1 database named `inspire-company-os-db`.
-2. Copy only that new database ID into `wrangler.toml` at `REPLACE_WITH_COMPANY_OS_D1_ID`.
+2. Replace only the zero UUID sentinel in `wrangler.toml` with that new D1 UUID.
 3. Apply all migrations: `npm run db:migrate:remote`.
 4. Create a Cloudflare Access application/policy for `ops.getinspiration.com` restricted to Founder/authorized internal users.
 5. Configure Worker Access verification values: `TEAM_DOMAIN`, `POLICY_AUD`, and optionally `ACCESS_ALLOWED_EMAILS`. Do not copy INSPIRE core secrets.
@@ -97,9 +101,11 @@ After activation, authenticate through Cloudflare Access and verify:
 7. approve/reject updates audit/activity but executes no external action;
 8. explicit Research run shows `thinking` then `waiting` if Workers AI succeeds;
 9. one-time schedule executes only after due;
-10. near soft-cap scheduled work remains queued/deferred rather than disappearing;
-11. `/api/audit` and `/api/usage` reflect real records;
-12. no paid external AI key is configured.
+10. overlapping cron attempts cannot execute one schedule twice during an active lease;
+11. repeated schedule failures stop after the bounded threshold and surface Founder attention;
+12. near soft-cap scheduled work remains queued/deferred rather than disappearing;
+13. `/api/audit` and `/api/usage` reflect real records;
+14. no paid external AI key is configured.
 
 ## Next only after V0 is live
 
