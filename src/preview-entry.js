@@ -1,4 +1,4 @@
-import { renderOffice } from './ui.js';
+import { renderHQ } from './hq-ui.js';
 
 const HEADERS = {
   'cache-control': 'no-store',
@@ -18,7 +18,7 @@ const AGENTS = [
 const EVENTS = [
   { id: 5, actor_agent_id: 'marketing', actor_name: 'Marketing', event_type: 'agent_output', summary: 'Launch angle drafted. Sending the measurable version to Finance.', ts: new Date().toISOString() },
   { id: 4, actor_agent_id: 'research', actor_name: 'Research', event_type: 'ai_started', summary: 'Research started analyzing the current signal.', ts: '2026-09-17T13:58:20Z' },
-  { id: 3, actor_agent_id: 'admin', actor_name: 'Admin', event_type: 'message_sent', summary: 'Admin → Research: validate the strongest launch signal.', ts: '2026-09-17T13:57:40Z' },
+  { id: 3, actor_agent_id: 'admin', actor_name: 'Admin', event_type: 'message_sent', summary: 'Admin → Research: validate the strongest launch signal.', ts: new Date().toISOString() },
 ];
 
 const TASKS = [
@@ -55,7 +55,7 @@ export default {
     const path = url.pathname;
     const method = request.method.toUpperCase();
 
-    if (method === 'GET' && path === '/') return html(renderOffice());
+    if (method === 'GET' && path === '/') return html(renderHQ());
     if (method === 'GET' && path === '/health') return json({ ok: true, service: 'inspire-company-os-preview', preview: true, time: new Date().toISOString() });
     if (method === 'GET' && path === '/api/bootstrap') return json(bootstrap());
 
