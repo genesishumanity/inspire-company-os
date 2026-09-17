@@ -23,6 +23,7 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated}.drawer{bo
   </main>
   <aside class="drawer">
     <div class="section"><h1>Control Room</h1><div class="muted">Read-only visualization shell. Existing backend remains source of truth.</div></div>
+    <div class="section"><h2>Founder Inbox</h2><div id="inbox"></div></div>
     <div class="section"><h2>Agents</h2><div id="agents"></div></div>
     <div class="section"><h2>Latest Events</h2><div id="events"></div></div>
     <div class="section"><h2>Tasks</h2><div id="tasks"></div></div>
@@ -188,6 +189,10 @@ function wrapText(text, x, y, maxWidth, lineHeight) {
 }
 
 function renderPanel() {
+  const inbox = state.world.founderInbox?.unreadFounderMessages || [];
+  document.getElementById('inbox').innerHTML = inbox.length
+    ? inbox.map((m) => '<div class="row"><b>' + esc(m.subject || 'Message') + '</b><div class="muted">' + esc(m.sender_name || m.sender_agent_id || 'agent') + '</div><button class="pill" data-read="' + esc(m.id) + '">Mark read</button></div>').join('')
+    : '<div class="row muted">Founder Inbox clear.</div>';
   document.getElementById('agents').innerHTML = state.world.agents.map((a) => '<div class="row agent ' + esc(a.status) + '"><div><span class="dot"></span><b>' + esc(a.label) + '</b><div class="muted">' + esc(a.statusReason || a.role) + '</div></div><span class="pill">' + esc(a.status) + '</span></div>').join('');
   document.getElementById('events').innerHTML = state.world.events.slice(0, 8).map((e) => '<div class="row event"><b>' + esc(e.event_type) + '</b><div>' + esc(e.summary) + '</div><div class="muted">' + esc(e.actor_name || e.actor_agent_id || 'system') + '</div></div>').join('') || '<div class="row muted">No events.</div>';
   document.getElementById('tasks').innerHTML = state.world.tasks.slice(0, 8).map((t) => '<div class="row"><b>' + esc(t.title) + '</b><div class="muted">' + esc(t.owner_name || t.owner_agent_id || 'unassigned') + ' · ' + esc(t.status) + '</div></div>').join('') || '<div class="row muted">No tasks.</div>';
@@ -238,6 +243,12 @@ function frame(t) {
 document.getElementById('zoomIn').onclick = () => { state.zoom = Math.min(1.8, state.zoom + 0.1); };
 document.getElementById('zoomOut').onclick = () => { state.zoom = Math.max(0.75, state.zoom - 0.1); };
 document.getElementById('reset').onclick = () => { state.zoom = 1; state.panX = 0; state.panY = 0; };
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-read]');
+  if (!button) return;
+  await fetch('/api/messages/' + encodeURIComponent(button.getAttribute('data-read')) + '/read', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{}' });
+  await load();
+});
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 poll();
 requestAnimationFrame(frame);

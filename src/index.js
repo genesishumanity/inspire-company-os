@@ -8,6 +8,13 @@ const PRIORITIES = new Set(['low', 'normal', 'high', 'critical']);
 const RECURRENCES = new Set(['once', 'hourly', 'daily', 'weekly']);
 const AGENT_RUN_LEASE_MINUTES = 10;
 
+export function operationalStatusFromCounts({ blocked = 0, review = 0, inProgress = 0 } = {}) {
+  if (blocked > 0) return 'blocked';
+  if (review > 0) return 'reviewing';
+  if (inProgress > 0) return 'working';
+  return 'waiting';
+}
+
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',

@@ -162,3 +162,28 @@ Still unproven or unrelated failing checks:
 - `node tests/runtime-contract.mjs` fails on `Missing runtime contract: fail-closed Access configuration` in existing `src/entry.js`, which this HQ preview change did not modify.
 - `node tests/status-resolution.mjs` fails because `src/index.js` does not export `operationalStatusFromCounts`, an existing branch mismatch outside this HQ world pass.
 - Production deployment, production D1, production Access/auth, secrets, and `ops.getinspration.com` were not touched.
+
+## HQ World test-blocker cleanup — 2026-09-17
+
+Fixed only the existing test blockers after commit `2c825e196ae5047ddf1517411023d7da3f650e3e`.
+
+Changed:
+
+- `src/entry.js` now explicitly preserves the existing fail-closed `access_not_configured` Access error from `authorizeRequest`.
+- `src/index.js` exports the existing operational status priority helper expected by `tests/status-resolution.mjs`.
+- `src/ui.js` restores the Founder Inbox unread-message read button contract that the vanilla HQ shell had dropped.
+
+Validation run:
+
+- `npm run check` passed.
+- `node tests/world-engine-contract.mjs` passed.
+- `node tests/runtime-contract.mjs` passed.
+- `node tests/status-resolution.mjs` passed.
+- `node tests/scheduler-cadence.mjs` passed.
+- `node tests/auth-smoke.mjs` passed.
+
+Still not done:
+
+- No production deployment.
+- No cinematic HQ skin.
+- No AI Router, Groq integration, or Agent Brain work.
