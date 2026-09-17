@@ -11,15 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check Worker syntax
-        run: |
-          node --check src/index.js
-          node --check src/ui.js
-      - name: Validate D1 migration with SQLite
-        run: |
-          sqlite3 /tmp/company-os.db < migrations/0001_init.sql
-          test "$(sqlite3 /tmp/company-os.db "select count(*) from agents;")" = "5"
-          test "$(sqlite3 /tmp/company-os.db "select count(*) from audit_log where action='registry_initialized';")" = "1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install validation dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run repository smoke checks
+        run: npm run smoke
+      - name: Verify Access guard fails closed
+        run: node tests/auth-smoke.mjs
+      - name: Bundle Worker without deploying
+        run: npx wrangler deploy --dry-run --config wrangler.ci.toml --outdir /tmp/company-os-worker
       - name: Verify required Company OS docs
         run: |
           test -f docs/COMPANY_OS_ARCHITECTURE.md
