@@ -96,7 +96,9 @@ async function todayUsage(env) {
             COALESCE(SUM(output_tokens),0) AS output_tokens,
             COALESCE(SUM(estimated_neurons),0) AS estimated_neurons,
             COALESCE(SUM(estimated_cost_usd),0) AS estimated_cost_usd
-     FROM ai_usage WHERE date(ts) = date('now')`
+     FROM ai_usage
+     WHERE ts >= date('now')
+       AND ts < datetime(date('now'), '+1 day')`
   ).first();
   return row || { requests: 0, input_tokens: 0, output_tokens: 0, estimated_neurons: 0, estimated_cost_usd: 0 };
 }
@@ -109,7 +111,7 @@ async function createFounderNotice(env, requestedBy, title, rationale, payload =
   return result.meta.last_row_id;
 }
 
-async function runAgent(env, agentId, instruction, context = '', source = 'api') {
+export async function runAgent(env, agentId, instruction, context = '', source = 'api') {
   const agent = await getAgent(env, agentId);
   if (!agent) throw new Error('agent_not_found');
   const task = clean(instruction, 6000);
@@ -171,33 +173,6 @@ async function runAgent(env, agentId, instruction, context = '', source = 'api')
     }
     await audit(env, 'system', 'ai-runtime', 'ai_run_failed', 'agent', agentId, { source, model, quotaLike: isQuota, error: clean(error?.message || error, 500) });
     throw error;
-  }
-}
-
-function nextTime(recurrence, from = new Date()) {
-  const d = new Date(from);
-  if (recurrence === 'hourly') d.setUTCHours(d.getUTCHours() + 1);
-  if (recurrence === 'daily') d.setUTCDate(d.getUTCDate() + 1);
-  if (recurrence === 'weekly') d.setUTCDate(d.getUTCDate() + 7);
-  return d.toISOString();
-}
-
-async function processSchedules(env) {
-  const due = await env.COMPANY_OS_DB.prepare(
-    `SELECT * FROM schedules WHERE enabled = 1 AND datetime(next_run_at) <= datetime('now') ORDER BY next_run_at ASC LIMIT 3`
-  ).all();
-  for (const item of due.results || []) {
-    try {
-      await activity(env, item.agent_id, 'schedule_due', item.title, { scheduleId: item.id }, 'schedule', item.id);
-      await runAgent(env, item.agent_id, item.instruction, `Scheduled event: ${item.title}`, 'schedule');
-      if (item.recurrence === 'once') {
-        await env.COMPANY_OS_DB.prepare(`UPDATE schedules SET enabled = 0, last_run_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(item.id).run();
-      } else {
-        await env.COMPANY_OS_DB.prepare(`UPDATE schedules SET last_run_at = CURRENT_TIMESTAMP, next_run_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(nextTime(item.recurrence), item.id).run();
-      }
-    } catch (error) {
-      await activity(env, item.agent_id, 'schedule_deferred', `${item.title} deferred`, { error: clean(error?.message || error, 500) }, 'schedule', item.id);
-    }
   }
 }
 
@@ -317,6 +292,7 @@ async function route(request, env) {
     const owner = clean(payload.owner_agent_id, 100) || null;
     if (owner && !(await getAgent(env, owner))) return json({ error: 'owner_not_found' }, 404);
     const creator = clean(payload.created_by_agent_id, 100) || 'admin';
+    if (creator && !(await getAgent(env, creator))) return json({ error: 'creator_not_found' }, 404);
     const priority = PRIORITIES.has(payload.priority) ? payload.priority : 'normal';
     const needsApproval = payload.approval_required ? 1 : 0;
     let approvalId = null;
@@ -361,6 +337,7 @@ async function route(request, env) {
     const title = clean(payload.title, 500);
     if (!title) return json({ error: 'title_required' }, 400);
     const requester = clean(payload.requested_by_agent_id, 100) || null;
+    if (requester && !(await getAgent(env, requester))) return json({ error: 'requester_not_found' }, 404);
     const inserted = await env.COMPANY_OS_DB.prepare(
       `INSERT INTO approvals (requested_by_agent_id,action_type,title,rationale,payload_json) VALUES (?,?,?,?,?)`
     ).bind(requester, clean(payload.action_type || 'restricted_action', 100), title, clean(payload.rationale, 4000), JSON.stringify(payload.payload || {})).run();
@@ -378,6 +355,12 @@ async function route(request, env) {
     if (!approval) return json({ error: 'approval_not_found' }, 404);
     if (approval.status !== 'pending') return json({ error: 'approval_already_decided' }, 409);
     await env.COMPANY_OS_DB.prepare(`UPDATE approvals SET status=?,decided_at=CURRENT_TIMESTAMP,decided_by=? WHERE id=?`).bind(payload.status, actorFrom(request), approval.id).run();
+    if (payload.status === 'rejected') {
+      const linked = await env.COMPANY_OS_DB.prepare(`SELECT id,title,owner_agent_id FROM tasks WHERE approval_id=? AND status='blocked'`).bind(approval.id).all();
+      for (const task of linked.results || []) {
+        if (task.owner_agent_id) await setStatus(env, task.owner_agent_id, 'blocked', `Task #${task.id} rejected by Founder: ${task.title}`, 'approval_rejected');
+      }
+    }
     await activity(env, approval.requested_by_agent_id, 'approval_decided', `${approval.title} → ${payload.status}`, { approvalId: approval.id, decision: payload.status }, 'approval', approval.id);
     await audit(env, 'human', actorFrom(request), 'approval_decided', 'approval', approval.id, { decision: payload.status });
     return json({ ok: true });
@@ -424,8 +407,5 @@ export default {
       const status = code === 'invalid_json' || code === 'request_too_large' || code.endsWith('_required') || code === 'invalid_status' ? 400 : code === 'agent_not_found' ? 404 : 500;
       return json({ error: code, detail: status === 500 ? 'See audit/activity logs for operational detail.' : undefined }, status);
     }
-  },
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(processSchedules(env));
   },
 };
