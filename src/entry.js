@@ -1,6 +1,7 @@
 import app from './index.js';
 import { authorizeRequest } from './auth.js';
 import { runDueSchedules } from './scheduler.js';
+import { reservedAiRequests } from './ai-budget.js';
 
 const SAFE_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -203,19 +204,24 @@ async function securedFetch(request, env, ctx) {
 }
 
 async function scheduledFetch(_controller, env, ctx) {
-  // Keep enough headroom for a full cron batch. This prevents a scheduled tick
-  // from consuming the final free AI requests and then losing due work.
+  // Keep enough headroom for a full cron batch. Count atomic reservations as
+  // well as completed usage so in-flight manual runs cannot make the guard optimistic.
   const reserve = 3;
   const softCap = Math.max(1, Number(env.AI_DAILY_REQUEST_SOFT_CAP || 100));
 
   try {
-    const usage = await env.COMPANY_OS_DB.prepare(
-      `SELECT COUNT(*) AS requests
-       FROM ai_usage
-       WHERE ts >= date('now')
-         AND ts < datetime(date('now'), '+1 day')`
-    ).first();
-    const requests = Number(usage?.requests || 0);
+    const [usage, reserved] = await Promise.all([
+      env.COMPANY_OS_DB.prepare(
+        `SELECT COUNT(*) AS requests
+         FROM ai_usage
+         WHERE ts >= date('now')
+           AND ts < datetime(date('now'), '+1 day')`
+      ).first(),
+      reservedAiRequests(env),
+    ]);
+    const loggedRequests = Number(usage?.requests || 0);
+    const reservedRequests = Number(reserved || 0);
+    const requests = Math.max(loggedRequests, reservedRequests);
 
     if (requests + reserve > softCap) {
       const alreadyLogged = await env.COMPANY_OS_DB.prepare(
@@ -233,12 +239,12 @@ async function scheduledFetch(_controller, env, ctx) {
              VALUES ('schedule_guard_deferred', ?, ?, 'scheduler')`
           ).bind(
             `Scheduled AI work deferred to protect the daily soft cap (${softCap})`,
-            JSON.stringify({ requests, reserve, softCap, paidFallbackUsed: false }),
+            JSON.stringify({ requests, loggedRequests, reservedRequests, reserve, softCap, paidFallbackUsed: false }),
           ),
           env.COMPANY_OS_DB.prepare(
             `INSERT INTO audit_log (actor_type,actor_id,action,entity_type,details_json)
              VALUES ('system','scheduler','schedule_guard_deferred','scheduler',?)`
-          ).bind(JSON.stringify({ requests, reserve, softCap, paidFallbackUsed: false })),
+          ).bind(JSON.stringify({ requests, loggedRequests, reservedRequests, reserve, softCap, paidFallbackUsed: false })),
         ]);
       }
       return;
