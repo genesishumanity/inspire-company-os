@@ -26,6 +26,8 @@ src/entry.js
   - validates Cf-Access-Jwt-Assertion
   - checks Access audience/issuer
   - optional email allowlist
+  - Founder approval allowlist
+  - request-integrity guards
   - graceful D1/AI quota response
   - cron AI headroom guard
         |
@@ -36,8 +38,8 @@ src/index.js                    src/scheduler.js
   - registry/status             - atomic claim + lease
   - tasks/messages              - bounded retries
   - approvals                   - circuit breaker
-  - explicit AI runs            - Founder escalation
-        |                              |
+  - explicit AI runs            - cadence preservation
+        |                       - Founder escalation
         +--------------+---------------+
                        v
                 COMPANY_OS_DB (D1)
@@ -83,7 +85,7 @@ Representative transitions:
 - AI quota/capacity guard: `sleeping`
 - non-quota AI failure: `blocked`
 
-Status changes write `activity_events`; mutating human/API actions write `audit_log`.
+Status changes write `activity_events`; mutating human/API actions write `audit_log`. Production manual status mutation is blocked so the office cannot be cosmetically faked.
 
 ## Extensible registry
 
@@ -101,11 +103,17 @@ V0 views include office/registry, live activity, Founder Inbox, shared tasks, ag
 
 Founder Inbox is computed from pending approvals, blocked tasks, unread messages addressed to `founder-office`, and AI quota/defer/failure events. It does not duplicate those facts into a second inbox table.
 
+## Approvals
+
+Approval-gated tasks cannot move into `in_progress`, `review`, or `done` until their linked approval is `approved`. This is checked in the secure entry layer and enforced again by D1 triggers. Rejection automatically blocks the linked task. Production approval decisions require an authenticated Access identity listed in `FOUNDER_APPROVER_EMAILS`; missing allowlist configuration fails closed.
+
 ## Schedules
 
 A single cron trigger runs every 15 minutes. The secure entry layer first reserves enough daily AI headroom for the bounded cron batch. `src/scheduler.js` then scans a small due candidate set and executes at most three schedules per tick.
 
 Each due schedule is claimed atomically with a claim token and a 10-minute lease. Overlapping cron invocations cannot claim the same active lease. Quota/capacity deferrals preserve the schedule for a later retry; ordinary failures use bounded backoff. After three consecutive non-quota failures, the schedule is disabled and Founder attention is inserted instead of burning resources forever.
+
+Recurring cadence is stored separately from retry timing. `next_run_at` means “when should the scheduler try again”; `cadence_anchor_at` means “which planned recurring slot does this work belong to.” A late cron or 15-minute quota retry therefore cannot permanently shift a daily 09:00 schedule to 09:15. Missed recurring slots are skipped rather than replayed in a burst. This behavior is introduced by `0006_schedule_cadence_anchor.sql` and covered by scheduler cadence tests.
 
 Recurrence types remain `once`, `hourly`, `daily`, `weekly`.
 
@@ -113,7 +121,7 @@ Recurrence types remain `once`, `hourly`, `daily`, `weekly`.
 
 `workers_dev=false` and `preview_urls=false`. The intended route is only `ops.getinspiration.com`.
 
-The secure entry layer validates Cloudflare Access' `Cf-Access-Jwt-Assertion` JWT using the configured `TEAM_DOMAIN` issuer and `POLICY_AUD` audience. If Access variables are absent or invalid, **every production route fails closed, including `/health`**. Local auth bypass works only with `AUTH_MODE=local` and a localhost/loopback hostname.
+The secure entry layer validates Cloudflare Access' `Cf-Access-Jwt-Assertion` JWT using the configured `TEAM_DOMAIN` issuer and `POLICY_AUD` audience. If Access variables are absent or invalid, **every production route fails closed, including `/health`**. Production approval decisions additionally require `FOUNDER_APPROVER_EMAILS`. Mutations require JSON and reject browser requests explicitly marked cross-site. Local auth bypass works only with `AUTH_MODE=local` and a localhost/loopback hostname.
 
 The UI uses same-origin requests and restrictive CSP/security headers. No third-party frontend scripts are required.
 
@@ -125,7 +133,7 @@ The UI uses same-origin requests and restrictive CSP/security headers. No third-
 - `POST /api/agents` — add registry agent
 - `GET /api/agents/:id`
 - `POST /api/agents/:id/run`
-- `PATCH /api/agents/:id/status`
+- `PATCH /api/agents/:id/status` — local testing only; blocked in production
 - `POST /api/messages`
 - `PATCH /api/messages/:id/read`
 - `POST /api/tasks`
