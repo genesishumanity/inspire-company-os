@@ -12,7 +12,7 @@ AI_DAILY_REQUEST_SOFT_CAP = "50"
 AI_EST_NEURONS_PER_REQUEST = "60"
 
 [[routes]]
-pattern = "ops.getinspiration.com"
+pattern = "ops.getinspration.com"
 custom_domain = true
 
 [[d1_databases]]
