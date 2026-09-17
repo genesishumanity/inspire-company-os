@@ -109,6 +109,24 @@ if [ "$REJECT_STATUS" != "blocked" ]; then
   exit 1
 fi
 
+# Founder Inbox hygiene: identical pending founder_attention notices must dedupe,
+# but the same alert may be created again after the prior notice is resolved.
+sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,rationale) values('research','founder_attention','quota smoke','test');"
+sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,rationale) values('research','founder_attention','quota smoke','test');"
+NOTICE_COUNT="$(sqlite3 "$DB_FILE" "select count(*) from approvals where requested_by_agent_id='research' and action_type='founder_attention' and title='quota smoke';")"
+if [ "$NOTICE_COUNT" != "1" ]; then
+  echo "Duplicate pending Founder alert was not suppressed" >&2
+  exit 1
+fi
+sqlite3 "$DB_FILE" "update approvals set status='approved' where requested_by_agent_id='research' and action_type='founder_attention' and title='quota smoke' and status='pending';"
+sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,rationale) values('research','founder_attention','quota smoke','test again');"
+NOTICE_TOTAL="$(sqlite3 "$DB_FILE" "select count(*) from approvals where requested_by_agent_id='research' and action_type='founder_attention' and title='quota smoke';")"
+NOTICE_PENDING="$(sqlite3 "$DB_FILE" "select count(*) from approvals where requested_by_agent_id='research' and action_type='founder_attention' and title='quota smoke' and status='pending';")"
+if [ "$NOTICE_TOTAL" != "2" ] || [ "$NOTICE_PENDING" != "1" ]; then
+  echo "Resolved Founder alert did not allow a future alert" >&2
+  exit 1
+fi
+
 grep -q '^workers_dev = false$' wrangler.toml
 grep -q '^preview_urls = false$' wrangler.toml
 grep -q '^main = "src/entry.js"$' wrangler.toml
