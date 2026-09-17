@@ -9,71 +9,64 @@ Goal: keep V0 at approximately $0 and fail safely instead of silently falling ba
 Official Cloudflare documentation checked on 2026-09-17:
 
 - Workers Free: 100,000 requests/day; 10 ms CPU/request; 5 cron triggers/account.
-- D1 Free: 5,000,000 rows read/day; 100,000 rows written/day; 5 GB total storage; limits reset daily and queries fail after the daily limit is reached.
-- Workers AI: 10,000 Neurons/day free allocation. On Workers Free, usage beyond that allocation is not a paid overage path; further operations fail until reset.
-- SQLite Durable Objects are available on Workers Free, but V0 does not need them.
+- D1 Free: 5,000,000 rows read/day; 100,000 rows written/day; 5 GB total storage. Since 2026-09-01, daily row limits are enforced and queries fail until the UTC reset when exceeded.
+- Workers AI: 10,000 Neurons/day free allocation. On Workers Free there is no automatic paid overage path beyond the free allocation.
+- `@cf/zai-org/glm-4.7-flash` remains available on Workers Free.
 
 Sources:
 
 - https://developers.cloudflare.com/workers/platform/limits/
 - https://developers.cloudflare.com/d1/platform/pricing/
-- https://developers.cloudflare.com/d1/platform/limits/
+- https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/
 - https://developers.cloudflare.com/workers-ai/platform/pricing/
-- https://developers.cloudflare.com/durable-objects/platform/pricing/
+- https://developers.cloudflare.com/workers-ai/models/glm-4.7-flash/
 
 ## Runtime rules
 
-1. **No paid model fallback.** `AI_MODEL` defaults to a Workers AI model available on the Free plan.
+1. **No paid model fallback.** V0 uses only the Workers AI binding.
 2. **No idle inference.** Messages and UI polling never invoke AI.
 3. **Explicit/due-event only.** AI runs only through an explicit agent run or due schedule.
-4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP` defaults to `50` Company OS AI requests per UTC day. This is deliberately conservative because request count is not the same thing as billed Neurons.
-5. **Quota/capacity failure = sleep/defer.** If Workers AI returns quota/rate/capacity style errors, the agent is put into `sleeping`, a Founder Inbox approval/attention item is created, and no paid provider is attempted.
-6. **Non-quota runtime failure = blocked.** The agent becomes `blocked` for review rather than retry-looping.
-7. **Cron work is bounded.** A cron invocation processes at most three due schedules.
-8. **Frontend polling slows when hidden.** Visible: 8 seconds. Hidden: 30 seconds. Polling does not invoke AI.
+4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP=50` Company OS AI requests per UTC day.
+5. **Quota/capacity failure = sleep/defer.** The affected agent sleeps, Founder attention is surfaced, and no paid provider is attempted.
+6. **Non-quota runtime failure = blocked.** No blind retry loop.
+7. **Cron work is bounded.** At most three due schedules per invocation.
+8. **Frontend polling does not invoke AI.** Visible polling is 8 seconds; hidden polling slows to 30 seconds.
+9. **D1 hard-limit response is graceful.** If D1 reports its free-tier daily row limit, the secure entry layer returns `503 storage_deferred` with retry-after guidance instead of pretending the operation succeeded.
 
-## Usage counters
+## AI usage / cost estimation
 
-`ai_usage` records:
+The current GLM-4.7-Flash Cloudflare rate is:
 
-- model
-- successful/failed request count
-- input/output tokens when the model response exposes them
-- optional estimated Neurons
-- estimated USD cost
+- 5,500 neurons per 1M input tokens
+- 36,400 neurons per 1M output tokens
+- Workers AI reference rate: $0.011 per 1,000 neurons
 
-Cloudflare's model binding does not guarantee an exact billed-Neuron value in every model response. Therefore V0 does not invent one. `AI_EST_NEURONS_PER_REQUEST` defaults to `0`; it should only be changed when the operator has a defensible estimate from observed Cloudflare dashboard usage.
+Migration `0002_ai_usage_estimates.sql` estimates neurons from token usage when Workers AI returns token counts. If token usage is unavailable, `AI_EST_NEURONS_PER_REQUEST=60` is used as a conservative V0 fallback.
 
-Within the Free plan, `estimated_cost_usd` remains `0` because there is no paid fallback path.
+This number is an **estimate**, not a billing record. The Cloudflare dashboard remains the billing/source-of-truth for actual neuron consumption.
 
-## Recommended operating thresholds
+The `ai_usage` table records request success/failure, model, input/output tokens when available, estimated neurons, and estimated reference USD value. A displayed USD estimate does not mean money was charged: V0 does not have a paid fallback path.
 
-These are Company OS guardrails, not claims about Cloudflare billing:
+## Operating thresholds
 
-- 25 AI runs/day: review whether recurring schedules are too chatty.
+- 25 AI runs/day: review recurring schedules for unnecessary work.
 - 40 AI runs/day: avoid adding more recurring AI work that day.
-- 50 AI runs/day: soft-defer all further Company OS AI runs until UTC reset.
-- Any Cloudflare quota/capacity error: sleep affected agent and surface Founder attention immediately.
+- 50 AI runs/day: defer further Company OS AI runs until UTC reset.
+- Any quota/capacity error: sleep affected agent and surface Founder attention.
+
+The 50-run cap plus the 60-neuron fallback estimate represents roughly 3,000 estimated neurons/day before token-based correction, leaving substantial room under the 10,000-neuron free allocation for normal V0 prompts.
 
 ## D1 efficiency rules
 
-- index feed lookups by timestamp;
-- index task owner/status;
-- index pending approvals;
-- index schedule due-time;
-- cap UI queries to recent rows;
-- do not write heartbeat rows;
-- do not persist polling reads as events;
-- do not store model chain-of-thought; store only operational output needed by the company.
+- indexed feed/task/approval/schedule lookups;
+- bounded recent-row queries;
+- no heartbeat writes;
+- no events generated by polling reads;
+- no chain-of-thought storage;
+- no idle agents writing status noise.
 
 ## Future paid upgrade gate
 
-A paid Cloudflare or external AI plan must be an explicit Founder decision. Before any upgrade, record:
-
-- observed daily AI demand;
-- observed D1 usage;
-- concrete V0 failure caused by a Free limit;
-- expected monthly maximum cost;
-- stop-loss/rollback path.
+A paid Cloudflare or external AI plan must be an explicit Founder decision. Before any upgrade, record observed usage, the concrete Free-tier failure, expected monthly maximum cost, and a stop-loss/rollback path.
 
 No Claude/OpenAI paid API key is required or expected by V0.
