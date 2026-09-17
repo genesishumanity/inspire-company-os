@@ -118,8 +118,19 @@ Workforce made **no changes** to:
 
 All structural recommendations remain proposals for Admin review and Founder approval where required.
 
+### Action 13 — Opened Admin review PR
+
+Opened Company OS PR #2:
+- `Workforce: first AI workforce baseline audit`
+- head: `workforce/baseline-2026-09-17`
+- base: `main`
+- documentation-only;
+- not merged by Workforce.
+
+Decision: leave structural recommendations in review state; no autonomous merge into Company OS source-of-truth.
+
 ## Next log entry trigger
 
 Append only when Workforce performs a meaningful new audit/recommendation/action. Do not generate heartbeat/noise entries.
 
-This file's own creation commit is intentionally not recursively logged; Git history is the immutable evidence for that write.
+This log update's own commit is intentionally not recursively logged; Git history is the immutable evidence for that write.
