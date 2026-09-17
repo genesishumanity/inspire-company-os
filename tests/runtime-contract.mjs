@@ -91,6 +91,8 @@ expect(index, /run_token=\?/, 'token-scoped agent run lease release');
 expect(index, /reason:'agent_busy'/, 'concurrent agent work defers instead of double-running');
 expect(index, /try \{ await releaseAgentRun\(env, agentId, leaseToken\); \} catch \{\}/, 'lease release cannot mask completed inference');
 expect(index, /derivedFounderInbox/, 'bootstrap reuses loaded Founder Inbox rows');
+expect(index, /max_completion_tokens:\s*700/, 'current Workers AI completion-token parameter');
+reject(index, /\bmax_tokens\s*:/, 'deprecated Workers AI max_tokens parameter');
 
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
