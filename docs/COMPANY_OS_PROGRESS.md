@@ -28,6 +28,8 @@ Updated: 2026-09-17
 - [x] Schedules/events with bounded cron processing.
 - [x] Scheduler leases prevent duplicate execution when cron ticks overlap.
 - [x] Scheduler failure circuit breaker retries bounded failures and disables/escalates after 3 consecutive failures.
+- [x] Recurring cadence is anchored independently from retry timing, so late cron/quota retries do not permanently shift hourly/daily/weekly schedules.
+- [x] Missed recurring slots are skipped rather than replayed as an inference burst.
 - [x] Founder Inbox derived from real operational records.
 - [x] Founder Inbox messages can be marked read so unresolved items do not accumulate forever.
 - [x] Agent detail/activity endpoint and modal.
@@ -41,11 +43,13 @@ Updated: 2026-09-17
 - [x] Simple 2D CSS office UI with no fake motion/activity.
 - [x] Adaptive live polling: 8s while active, 15/30s as idle, 60s in hidden tabs.
 - [x] Cloudflare Access is mandatory for **all** production routes, including `/health`.
-- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, mutation guards, truthful status, Founder-only approvals, adaptive polling, scheduler reserve/lease/circuit-breaker behavior, no-paid-fallback guardrail and production-domain configuration.
-- [x] SQLite smoke applies every migration and verifies the five-agent registry, AI usage estimate trigger, cost indexes, scheduler lease contract, approval gating, approved progression, and rejected-task blocking.
+- [x] Runtime contract test covers statuses, endpoints, Access wrapper, no public health bypass, mutation guards, truthful status, Founder-only approvals, adaptive polling, scheduler reserve/lease/circuit-breaker/cadence behavior, no-paid-fallback guardrail and production-domain configuration.
+- [x] SQLite smoke applies every migration and verifies the five-agent registry, AI usage estimate trigger, cost indexes, scheduler lease contract, cadence-anchor persistence, approval gating, approved progression, and rejected-task blocking.
+- [x] Dedicated `tests/scheduler-cadence.mjs` checks late execution and missed-slot behavior for hourly/daily/weekly recurrence.
 - [x] `0003_cost_guard_indexes.sql` adds the missing cost-oriented scheduler lookup index without duplicating base indexes.
 - [x] `0004_scheduler_leases.sql` adds claim/lease/attempt/failure state for safe cron execution.
 - [x] `0005_approval_integrity.sql` adds database-level approval integrity.
+- [x] `0006_schedule_cadence_anchor.sql` separates planned recurring cadence from retry/defer timing.
 - [x] Production deploy remains human-gated by `scripts/predeploy.mjs`.
 - [x] Undeployed D1 uses UUID-shaped sentinel `00000000-0000-0000-0000-000000000000`, improving local/config tooling while predeploy still blocks production until replaced with the real Company OS D1 UUID.
 - [x] CI workflow remains deploy-free.
@@ -113,9 +117,10 @@ After activation, authenticate through Cloudflare Access and verify:
 11. one-time schedule executes only after due;
 12. overlapping cron attempts cannot execute one schedule twice during an active lease;
 13. repeated schedule failures stop after the bounded threshold and surface Founder attention;
-14. near soft-cap scheduled work remains queued/deferred rather than disappearing;
-15. `/api/audit` and `/api/usage` reflect real records;
-16. no paid external AI key is configured.
+14. quota/retry timing does not change the planned recurring cadence;
+15. near soft-cap scheduled work remains queued/deferred rather than disappearing;
+16. `/api/audit` and `/api/usage` reflect real records;
+17. no paid external AI key is configured.
 
 ## Next only after V0 is live
 
