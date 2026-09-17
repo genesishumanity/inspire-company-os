@@ -6,32 +6,34 @@ Updated: 2026-09-17
 
 `genesishumanity/inspire-company-os` is a separate internal system from `genesishumanity/inspire-`.
 
-The Company OS owns its own:
+Company OS owns its own Cloudflare Worker (`inspire-company-os`), D1 database (`inspire-company-os-db`), Workers AI binding, variables/secrets, migrations, audit log and operational data. The core INSPIRE Worker/D1/secrets must never be reused here. Sharing the same Cloudflare account is acceptable; sharing bindings/data/secrets is not.
 
-- Cloudflare Worker: `inspire-company-os`
-- D1 database: `inspire-company-os-db`
-- Workers AI binding
-- environment variables and secrets
-- migrations, audit log and operational data
-
-The core INSPIRE Worker, D1 database and secrets must never be reused by this repository. Sharing the same Cloudflare account is acceptable; sharing bindings/data/secrets is not.
-
-At architecture verification time, the default branch of `genesishumanity/inspire-` exposed only its MVP `README.md`; role/workstream docs were not present in that branch. V0 therefore seeds concise role definitions from the Founder-provided workstream scopes and stores the core repo as a knowledge-source reference rather than copying product code.
+At architecture verification time, the default branch of `genesishumanity/inspire-` exposed only its MVP `README.md`; the broader role/workstream docs were not present there. V0 therefore seeds concise Founder-provided role scopes and keeps the core repo as a read-only knowledge-source reference.
 
 ## Minimum end-to-end path
 
 ```text
-Founder / Cloudflare Access user
+Founder / authorized internal user
+        |
+        v
+Cloudflare Access
         |
         v
 ops.getinspiration.com
         |
         v
-Company OS Worker
+src/entry.js
+  - validates Cf-Access-Jwt-Assertion
+  - checks Access audience/issuer
+  - optional email allowlist
+  - graceful D1/AI quota response
+        |
+        v
+src/index.js
   |       |        |
   |       |        +--> Workers AI (event-triggered only)
   |       |
-  |       +-----------> Cron (15 min due-event check; no inference when nothing is due)
+  |       +-----------> Cron (15 min due-event check)
   |
   +-------------------> COMPANY_OS_DB (D1)
                            agents
@@ -46,99 +48,70 @@ Company OS Worker
 
 ## Why D1 for V0
 
-D1 is the simplest fit for a small internal company operating system:
+D1 is the simplest fit for a small internal operating system: relational entities fit the domain, it scales to zero, indexed SQL keeps inbox/feed reads inexpensive, and no always-on process is required. SQLite Durable Objects remain a later option for high-concurrency realtime/WebSocket rooms; they are intentionally not a V0 dependency.
 
-- relational entities fit tasks/messages/approvals/audit well;
-- it scales to zero;
-- the Free plan is sufficient for V0;
-- SQL indexes make the Founder Inbox and activity feed cheap;
-- no always-on process is required.
+## Event-driven behavior
 
-SQLite Durable Objects remain a possible later addition for highly concurrent per-agent real-time state or WebSocket rooms. They are intentionally not a V0 dependency.
+Agents do not infer while idle. An AI run can happen only from:
 
-## Event-driven agent behavior
+1. explicit `POST /api/agents/:id/run`, or
+2. a due schedule processed by cron.
 
-Agents do not infer while idle.
-
-An AI run can happen only from:
-
-1. an explicit Founder/API `POST /api/agents/:id/run`, or
-2. a due schedule processed by the Cloudflare cron handler.
-
-A delivered agent-to-agent message creates a real backend event and can wake a sleeping recipient to `waiting`, but it does **not** automatically invoke the model. This prevents accidental agent loops and silent quota burn.
+Agent-to-agent messages create real backend events and can wake a sleeping recipient to `waiting`, but they do **not** auto-run the recipient. This blocks accidental model loops and silent quota burn.
 
 ## Real status state machine
 
-Allowed agent states:
+Allowed states: `working`, `thinking`, `waiting`, `blocked`, `reviewing`, `sleeping`.
 
-- `working`
-- `thinking`
-- `waiting`
-- `blocked`
-- `reviewing`
-- `sleeping`
-
-Examples of real transitions:
+Representative transitions:
 
 - explicit AI run: `thinking` -> `waiting`
 - task `in_progress`: `working`
 - task `blocked`: `blocked`
 - task `review`: `reviewing`
 - task `done`: `waiting`
-- message delivered to a sleeping agent: `waiting`
+- message delivered to sleeping agent: `waiting`
 - AI quota/capacity guard: `sleeping`
 - non-quota AI failure: `blocked`
 
-Every status transition writes an `activity_events` row. Mutating human/API actions also write `audit_log` rows.
+Status changes write `activity_events`; mutating human/API actions write `audit_log`.
+
+## Extensible registry
+
+The five seed agents are Admin, Founder Office, Research, Marketing and Finance. Additional departments are not hard-coded into the UI. An authenticated Founder/internal user can add a registry row through `POST /api/agents`; the office/bootstrap views discover it from D1 automatically. New agents start `sleeping` until a real event occurs.
+
+Runtime role/permission mutation is intentionally not exposed in V0. Changing an existing agent's role contract remains a reviewed code/config change.
 
 ## UI
 
-The 2D office is deliberately simple CSS. Desk/card positions are static. There is no fake character walking, typing, pulsing or synthetic activity animation.
+The office is deliberately simple CSS. Desk/card positions are static; there is no fake walking, typing, pulsing or synthetic activity. The visible UI polls `/api/bootstrap` every 8 seconds and slows to 30 seconds while hidden. Polling does not invoke AI.
 
-The UI polls `/api/bootstrap` while visible (8 seconds) and slows while hidden (30 seconds). What changes on screen comes from backend state/events.
-
-Views included in V0:
-
-- office / agent registry
-- live activity feed
-- Founder Inbox
-- shared tasks
-- agent-to-agent messages
-- approval queue
-- schedules/events
-- per-agent detail/activity view
-- AI usage counters
+V0 views include office/registry, live activity, Founder Inbox, shared tasks, agent messages, approvals, schedules, per-agent activity, audit-backed state and AI usage counters.
 
 ## Founder Inbox
 
-Founder Inbox is a computed operational view made from:
-
-- pending approvals
-- blocked tasks
-- unread messages addressed to `founder-office`
-- AI quota/defer/failure events
-
-This avoids duplicating the same fact into a separate inbox table.
+Founder Inbox is computed from pending approvals, blocked tasks, unread messages addressed to `founder-office`, and AI quota/defer/failure events. It does not duplicate facts into another table.
 
 ## Schedules
 
-A single cron trigger runs every 15 minutes. It queries only enabled schedules whose `next_run_at` is due and processes at most three per invocation. If nothing is due, no AI inference runs.
-
-V0 recurrence types: `once`, `hourly`, `daily`, `weekly`.
+A single cron trigger runs every 15 minutes, fetches only due enabled schedules and processes at most three. If nothing is due, no inference runs. Recurrence types: `once`, `hourly`, `daily`, `weekly`.
 
 ## Security exposure
 
-`ops.getinspiration.com` must be protected by Cloudflare Access **before** production DNS/route exposure. The Worker itself does not contain a public login system in V0; Cloudflare Access is the authentication perimeter.
+`workers_dev=false` and `preview_urls=false`. The intended route is only `ops.getinspiration.com`.
 
-The UI uses only same-origin API calls and ships restrictive security headers/CSP. No third-party frontend scripts are required.
+The secure entry layer validates Cloudflare Access' `Cf-Access-Jwt-Assertion` JWT using the configured `TEAM_DOMAIN` issuer and `POLICY_AUD` audience. If Access variables are absent, protected routes fail closed. Local auth bypass works only with `AUTH_MODE=local` **and** a localhost/loopback hostname.
+
+`GET /health` is intentionally unauthenticated and returns only service liveness; it does not read D1 or expose company data. All UI and `/api/*` paths require valid Access authentication.
+
+The UI uses same-origin requests and restrictive CSP/security headers. No third-party frontend scripts are required.
 
 ## API surface
-
-Core endpoints:
 
 - `GET /health`
 - `GET /api/bootstrap`
 - `GET /api/agents`
+- `POST /api/agents` — add registry agent
 - `GET /api/agents/:id`
 - `POST /api/agents/:id/run`
 - `PATCH /api/agents/:id/status`
@@ -154,4 +127,4 @@ Core endpoints:
 - `GET /api/audit`
 - `GET /api/usage`
 
-There are intentionally no email, payment, customer-data automation, destructive GitHub, or production-deploy execution endpoints in V0.
+There are intentionally no email, payment, customer-data automation, destructive GitHub or production-deploy execution endpoints in V0.
