@@ -68,6 +68,18 @@ if [ "$LEASE_INDEX" != "1" ]; then
   exit 1
 fi
 
+# Cadence contract: retry/defer timing may change next_run_at but must never
+# overwrite the recurring schedule's planned slot.
+sqlite3 "$DB_FILE" "insert into schedules(agent_id,title,instruction,recurrence,next_run_at) values('research','cadence smoke','test','daily','2026-09-17T09:00:00.000Z');"
+CADENCE_ID="$(sqlite3 "$DB_FILE" "select max(id) from schedules;")"
+CADENCE_BEFORE="$(sqlite3 "$DB_FILE" "select cadence_anchor_at from schedules where id=$CADENCE_ID;")"
+sqlite3 "$DB_FILE" "update schedules set next_run_at='2026-09-17T09:15:00.000Z' where id=$CADENCE_ID;"
+CADENCE_AFTER="$(sqlite3 "$DB_FILE" "select cadence_anchor_at from schedules where id=$CADENCE_ID;")"
+if [ "$CADENCE_BEFORE" != "2026-09-17T09:00:00.000Z" ] || [ "$CADENCE_AFTER" != "$CADENCE_BEFORE" ]; then
+  echo "Retry timing overwrote recurring cadence anchor" >&2
+  exit 1
+fi
+
 # Approval integrity: gated work cannot progress before approval, and rejection
 # automatically blocks the linked task.
 sqlite3 "$DB_FILE" "insert into approvals(requested_by_agent_id,action_type,title,status) values('admin','restricted_action','approval smoke','pending');"
