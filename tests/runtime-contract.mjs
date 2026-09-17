@@ -50,6 +50,8 @@ expect(entry, /access_not_configured/, 'fail-closed Access configuration');
 expect(entry, /storage_deferred/, 'D1 quota graceful defer');
 expect(entry, /schedule_guard_deferred/, 'scheduler soft-cap preservation guard');
 expect(entry, /const reserve = 3;/, 'scheduler capacity reserve');
+expect(entry, /reservedAiRequests\(env\)/, 'scheduler reserve counts in-flight AI reservations');
+expect(entry, /Math\.max\(loggedRequests, reservedRequests\)/, 'scheduler uses conservative AI request count');
 expect(entry, /runDueSchedules\(env\)/, 'cron routes through leased scheduler');
 expect(entry, /manual_status_disabled/, 'production manual status disabled');
 expect(entry, /FOUNDER_APPROVER_EMAILS/, 'Founder-only approval allowlist');
@@ -75,6 +77,7 @@ expect(scheduler, /founder_attention/, 'terminal schedule failure routes to Foun
 expect(scheduler, /paidFallbackUsed: false/, 'scheduler paid fallback prohibition');
 expect(scheduler, /cadence_anchor_at/, 'retry-safe recurrence cadence');
 expect(scheduler, /nextRecurringTime\(schedule\.recurrence, cadenceFrom\)/, 'cadence advances from planned slot');
+expect(scheduler, /reason === 'agent_busy'.*isoAfterMinutes\(5\)/s, 'busy agent schedule retry is short and non-failing');
 
 expect(approvalIntegrity, /approval_not_granted/, 'database approval gate');
 expect(approvalIntegrity, /trg_rejected_approval_blocks_task/, 'rejection blocks linked task');
