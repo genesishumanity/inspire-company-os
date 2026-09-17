@@ -113,8 +113,6 @@ async function addAgent(request, env, actor) {
 
 async function securedFetch(request, env, ctx) {
   const url = new URL(request.url);
-  if (request.method === 'GET' && url.pathname === '/health') return app.fetch(request, env, ctx);
-
   const auth = await authorizeRequest(request, env);
   if (!auth.ok) return json({ error: auth.error }, auth.status || 403);
 
