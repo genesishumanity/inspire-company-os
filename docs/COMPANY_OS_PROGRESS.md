@@ -142,3 +142,23 @@ After activation, authenticate through Cloudflare Access and verify:
 - observed-usage-based AI budget tuning;
 - evaluate whether adaptive polling is sufficient before adding any more complex real-time transport;
 - add more departments through registry rows, not hard-coded UI changes.
+
+## HQ World vanilla preview evidence — 2026-09-17
+
+Changed the preview HQ from the earlier cinematic/DOM office experiment to a vanilla Pixel Agents-style Canvas world driven only by Company OS `/api/bootstrap`. The world adapter maps the five current presences, status transitions, backend events, pathfinding destinations, character animation modes, and real `agent_output` speech bubbles without exposing D1 credentials, secrets, prompts, transcripts, emails, customer data, filesystem access, WebSockets, terminal hooks, or upstream transcript scanners to the renderer.
+
+Validation run:
+
+- `npm install` passed with 0 reported vulnerabilities.
+- `npm run check` passed.
+- `node tests/world-engine-contract.mjs` passed.
+- `node tests/scheduler-cadence.mjs` passed.
+- `node tests/auth-smoke.mjs` passed.
+- `npm run deploy:preview` passed and deployed `inspire-company-os-preview` version `e5b24438-b65b-4343-ac1b-5d5f6c0adcb7`.
+- Deployed browser smoke passed at `https://inspire-company-os-preview.getinspired-ai.workers.dev`: `waiting -> working -> agent_output -> waiting`, with Canvas present and real Research backend output visible in the `agent_output` scenario.
+
+Still unproven or unrelated failing checks:
+
+- `node tests/runtime-contract.mjs` fails on `Missing runtime contract: fail-closed Access configuration` in existing `src/entry.js`, which this HQ preview change did not modify.
+- `node tests/status-resolution.mjs` fails because `src/index.js` does not export `operationalStatusFromCounts`, an existing branch mismatch outside this HQ world pass.
+- Production deployment, production D1, production Access/auth, secrets, and `ops.getinspration.com` were not touched.

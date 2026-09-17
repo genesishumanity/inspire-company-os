@@ -1,4 +1,5 @@
 import { renderOffice } from './ui.js';
+import { renderWorldEngineModule } from './world-engine.js';
 import { reserveAiRequest } from './ai-budget.js';
 
 const STATUS_VALUES = new Set(['working', 'thinking', 'waiting', 'blocked', 'reviewing', 'sleeping']);
@@ -25,6 +26,12 @@ function json(data, status = 200) {
 function html(body) {
   return new Response(body, {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
+  });
+}
+
+function js(body) {
+  return new Response(body, {
+    headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
   });
 }
 
@@ -326,6 +333,7 @@ async function route(request, env) {
   const method = request.method.toUpperCase();
 
   if (method === 'GET' && path === '/') return html(renderOffice());
+  if (method === 'GET' && path === '/world-engine.js') return js(renderWorldEngineModule());
   if (method === 'GET' && path === '/health') return json({ ok: true, service: 'inspire-company-os', time: new Date().toISOString() });
   if (method === 'GET' && path === '/api/bootstrap') return json(await bootstrap(env));
   if (method === 'GET' && path === '/api/founder-inbox') return json(await founderInbox(env));
