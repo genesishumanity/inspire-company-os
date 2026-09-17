@@ -201,7 +201,7 @@ export async function runAgent(env, agentId, instruction, context = '', source =
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `${task}${context ? `\n\nContext:\n${clean(context, 8000)}` : ''}` },
       ],
-      max_tokens: 700,
+      max_completion_tokens: 700,
       temperature: 0.2,
     });
     const output = extractAIText(result);
