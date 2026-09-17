@@ -60,12 +60,44 @@ The Workforce PR branch and Company OS `main` have diverged because Company OS c
 
 Decision: do not merge Workforce docs as if they are runtime validation. Admin should review/refresh against latest `main` before merge. Workforce will keep its recommendations evidence-only and documentation-scoped.
 
+## Critical-path activation map
+
+Workforce should optimize for **unblocking the most real work**, not for making every agent appear busy.
+
+### Highest-leverage company unblocker
+
+Current core launch truth shows the strongest shared dependency is:
+
+`real D1 binding/config → controlled production deploy → real Gemini + D1 end-to-end smoke → trustworthy runtime evidence`
+
+Why this matters:
+- **Web / Infrastructure** can move from blocker diagnosis to verified release;
+- **Security** gets production evidence for HOLD/GO controls;
+- **Marketing** gets authentic product proof and public-runtime verification;
+- **Growth** can start real Founder 20 / beta-session evidence capture;
+- **Performance** can validate the first-party activation funnel before any paid unlock;
+- **Launch / QA** can verify real first-use, mobile, quota and retry behavior;
+- **Sales** receives stronger product truth for later controlled outreach readiness.
+
+Therefore this is the current **highest workforce-unlock path**. Do not replace it with additional strategy tasks.
+
+### Separate Workforce observability path
+
+Company OS activation is important because it unlocks real workforce telemetry, but it must **not become an execution tax on the launch-critical Admin/Infrastructure path**.
+
+Sequencing rule:
+1. protect the core product D1/deploy/smoke critical path;
+2. activate Company OS D1 + Access in parallel only if it does not steal scarce launch-critical ownership/time;
+3. otherwise activate Workforce telemetry immediately after the product release-critical path is stable enough.
+
+This corrects a potential Workforce bias: better HR measurement is not more important than shipping the product.
+
 ## Immediate Admin actions requested
 
-### A1 — Activate telemetry before structural optimization
-Priority: P0 workforce observability.
+### A1 — Activate telemetry without pre-empting the product critical path
+Priority: P0 workforce observability, **subordinate to launch-critical product runtime when the same scarce owner is required**.
 
-Complete the existing Company OS activation path with dedicated resources and Access. After activation, verify real records in tasks/activity/audit/usage before changing roles/models.
+Complete the existing Company OS activation path with dedicated resources and Access when capacity allows without delaying core D1/deploy/smoke closure. After activation, verify real records in tasks/activity/audit/usage before changing roles/models.
 
 Workforce will not fabricate performance metrics before this is live.
 
