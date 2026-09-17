@@ -4,10 +4,12 @@ const entry = fs.readFileSync('src/entry.js', 'utf8');
 const index = fs.readFileSync('src/index.js', 'utf8');
 const auth = fs.readFileSync('src/auth.js', 'utf8');
 const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
+const aiBudget = fs.readFileSync('src/ai-budget.js', 'utf8');
 const approvalIntegrity = fs.readFileSync('migrations/0005_approval_integrity.sql', 'utf8');
 const cadenceIntegrity = fs.readFileSync('migrations/0006_schedule_cadence_anchor.sql', 'utf8');
 const founderNoticeDedupe = fs.readFileSync('migrations/0007_founder_notice_dedupe.sql', 'utf8');
 const agentRunLeases = fs.readFileSync('migrations/0008_agent_run_leases.sql', 'utf8');
+const aiDailyBudget = fs.readFileSync('migrations/0009_ai_daily_budget.sql', 'utf8');
 const ui = fs.readFileSync('src/ui.js', 'utf8');
 const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
 
@@ -84,6 +86,11 @@ expect(founderNoticeDedupe, /RAISE\(IGNORE\)/, 'duplicate Founder alert fails qu
 expect(agentRunLeases, /run_token/, 'database agent run token');
 expect(agentRunLeases, /run_lease_until/, 'database agent run lease expiry');
 expect(agentRunLeases, /last_run_started_at/, 'database agent run start timestamp');
+expect(aiDailyBudget, /CREATE TABLE IF NOT EXISTS ai_daily_budget/, 'atomic daily AI budget table');
+expect(aiDailyBudget, /reserved_requests/, 'daily AI reservation counter');
+expect(aiBudget, /ON CONFLICT\(day\) DO UPDATE/, 'atomic AI budget upsert');
+expect(aiBudget, /reserved_requests < \?/, 'AI reservation fails closed at soft cap');
+expect(index, /reserveAiRequest\(env, softCap\)/, 'AI run reserves budget before inference');
 expect(index, /AGENT_RUN_LEASE_MINUTES = 10/, 'bounded agent run lease');
 expect(index, /claimAgentRun/, 'atomic agent run claim');
 expect(index, /run_lease_until/, 'agent run lease expiry runtime');
