@@ -2,144 +2,206 @@
 
 Owner: AI Workforce Performance / People Ops
 Audience: Admin
+Status: refreshed after equal-standard Admin review and latest repo reconciliation
 
 ## Executive finding
 
-The first baseline does not support hiring, firing, retirement or per-agent model changes yet.
+The company is **execution-constrained, not strategy-constrained**.
+
+No current evidence supports hiring, firing, retirement, permission changes or per-agent model changes.
 
 The dominant workforce risks are:
-1. **observability gap** — Company OS is not live, so real task/activity/audit/AI-usage performance signals do not exist yet;
-2. **registry/workstream mismatch** — V0 registry intentionally seeds five agents while active core workstreams are much broader;
-3. **strategy saturation** — Research, Growth, Marketing and Performance all independently state that more generic strategy is now low-value;
-4. **document/source drift** — stale instructions can cause AI agents to execute superseded work literally;
-5. **environment blockers** — runtime/release evidence is missing and must not be misclassified as poor agent performance.
+1. **Admin structural overload risk** — Admin owns too many release/reconciliation surfaces even though current decision quality is generally strong;
+2. **observability gap** — Company OS is not live, so real task wait time, abandonment, blocked duration, escalation precision and per-agent accepted-outcome cost remain `NOT OBSERVABLE`;
+3. **strategy saturation** — Research, Growth, Marketing and Performance already documented stop conditions for generic strategy expansion;
+4. **document/source drift** — stale executable instructions can create duplicate or reopened AI work;
+5. **environment/release blockers** — infrastructure/control gates must not be misclassified as agent underperformance.
 
 ## Current observed classifications
 
 | Workstream | Workforce state | Why |
 |---|---|---|
-| Admin | HEALTHY + BLOCKED | Good reconciliation/ownership discipline; real runtime evidence still open. |
-| Founder Office | HEALTHY | Compresses cross-team state into decisions, catches drift, stops strategy churn. |
-| Research | HEALTHY current corrective state + DUPLICATING historical + OVERLOADED historical | 77-pack worklog; concrete duplicate alignment-stop-gate pair; now correctly in trigger-based maintenance mode. |
-| Marketing | HEALTHY + BLOCKED | Strategy ready; next value depends on product/measurement/assets. |
-| Growth / Content | HEALTHY + BLOCKED | Pre-evidence system complete; explicitly stops generic expansion pending real sessions/assets/publishing. |
-| Finance | HEALTHY | Preserves unknowns, keeps spend gated, does not turn scenarios into actuals. |
-| Security | HEALTHY + BLOCKED | Evidence-based HOLD; control function behaving correctly. |
-| Web | BLOCKED, evidence quality strong | Real deploy failure observed; root cause not invented without logs. |
-| Sales / CRM | HEALTHY + BLOCKED | Sending intentionally disabled behind product/deliverability/legal/measurement gates. |
-| Performance | HEALTHY + BLOCKED | Paid = OFF; reuses creative; says no more paid-strategy layer before evidence. |
+| Admin | **NEEDS ROLE CLARITY + STRUCTURAL OVERLOAD RISK** | Strong reconciliation/handoff discipline, but owns a wide critical path; source/release drift has already appeared. Measured bottleneck remains unobservable until live telemetry exists. |
+| Founder Office | HEALTHY current corrective state | Compresses cross-team state, catches drift, and has explicitly reduced narrative-document sprawl through action queue/index rules. |
+| Research | HEALTHY current corrective state + DUPLICATING historical + OVERLOADED historical | Broad discovery is saturated; concrete duplicate alignment-stop-gate pair exists; current trigger-based maintenance posture is correct. |
+| Marketing | HEALTHY + BLOCKED | Strategy ready; next value depends on product/measurement/assets and real launch evidence. |
+| Growth / Content | HEALTHY + BLOCKED | Pre-evidence system is complete; additional generic strategy is low-value without new evidence. |
+| Finance | HEALTHY | Preserves unknowns and spend gates; does not turn scenarios into actuals. |
+| Security | HEALTHY + BLOCKED | Evidence-based HOLD behavior is correct for a control function. |
+| Web / Infrastructure | BLOCKED, evidence quality strong | Real environment/deploy blockers exist; root causes are not invented without evidence. |
+| Sales / CRM | HEALTHY + BLOCKED | Sending remains deliberately gated behind product, deliverability, legal and measurement readiness. |
+| Performance | HEALTHY + BLOCKED | Paid remains OFF; no additional paid-strategy layer is justified before evidence. |
 
-Do not treat `BLOCKED` above as a negative performance label without blocker attribution.
+`BLOCKED` is not a negative performance label without blocker attribution.
+
+## Latest evidence refresh
+
+### Company OS hardening improved
+
+Main has advanced with additional protections around:
+- atomic AI budget reservations;
+- scheduler reserve accounting;
+- agent-busy retry behavior;
+- human-only Access identity;
+- run-lease / duplicate-run protection;
+- runtime contract coverage.
+
+This strengthens cost/control design but **does not remove the observability blocker**: live D1 + Access + controlled production activation is still required before Workforce can measure real agent performance.
+
+### Core Web source reconciliation improved
+
+The active core branch has new Web documentation commits aligning architecture, implementation manifest, Admin handoff and ship state with current launch/Brand V2 truth.
+
+This is positive corrective evidence against earlier source drift. It does **not** prove all release/source drift is solved; Workforce should continue measuring reopened/stale-source work once telemetry is live.
+
+### Workforce branch freshness
+
+The Workforce PR branch and Company OS `main` have diverged because Company OS continued hardening after the audit branch was created.
+
+Decision: do not merge Workforce docs as if they are runtime validation. Admin should review/refresh against latest `main` before merge. Workforce will keep its recommendations evidence-only and documentation-scoped.
 
 ## Immediate Admin actions requested
 
-### A1 — Activate telemetry before optimization
+### A1 — Activate telemetry before structural optimization
 Priority: P0 workforce observability.
 
-Complete the existing Company OS activation path using the dedicated existing resource topology:
-- resolve existing `inspire-company-os-db` rather than create duplicate resources;
-- configure D1 binding;
-- apply migrations;
-- verify Cloudflare Access + Worker authorization;
-- smoke-test agents/messages/tasks/approvals/schedules/audit/Workers AI;
-- keep paid AI fallback disabled.
+Complete the existing Company OS activation path with dedicated resources and Access. After activation, verify real records in tasks/activity/audit/usage before changing roles/models.
 
-Workforce will not fabricate completion/blocker/cost metrics before this is live.
+Workforce will not fabricate performance metrics before this is live.
 
-### A2 — Canonical workforce roster mapping
-Do **not** add registry rows yet. First create/review this mapping:
+### A2 — Reduce mandatory Admin touch surface
+Current structural risk is reconciliation-by-centralization.
 
-`workstream | durable agent? | owner | decision rights | source-of-truth | activation state | control-function? | current model policy`
+Proposed routing rule:
+- specialist completes work and writes canonical handoff;
+- Admin involvement is required only when the handoff changes release/runtime/source-of-truth, creates a cross-owner conflict, or requires implementation/release action;
+- ordinary specialist updates do not wait for Admin acknowledgement.
 
-Reason: current V0 registry has five seeded agents, while the active source tree contains many durable specialist lanes. Some may be temporary workstreams rather than agents. Registry expansion before this distinction is clear will create phantom staffing and duplicate ownership.
+This is a task-routing proposal, not a role-prompt/permission change.
 
-### A3 — Research duplication cleanup
-Ask Research owner to choose the canonical source between:
-- `RESEARCH_CREATIVE_ALIGNMENT_STOPPING_GATE_V1.md`
-- `RESEARCH_CREATIVE_ALIGNMENT_STOP_GATE_V1.md`
+### A3 — Canonical workforce roster mapping
+Do **not** expand registry yet. First map:
 
-Workforce should not select the domain winner. Recommended cleanup pattern:
-- one canonical file;
-- second file explicitly superseded/redirect-only;
-- worklog updated once.
+`workstream | durable agent? | owner | decision rights | source-of-truth | activation state | control-function? | model policy`
 
-### A4 — Stop-trigger rule for task assignment
-Until real evidence creates a decision gap, reject broad tasks such as:
-- “do more research”;
-- “make another launch strategy”;
-- “expand growth plan”;
-- “create more paid strategy.”
+Goal: distinguish permanent agents from temporary workstreams and prevent phantom staffing/duplicate ownership.
 
-A new task in Research/Growth/Marketing/Performance should name at least one trigger:
+### A4 — Stop-trigger task assignment
+Research/Growth/Marketing/Performance should not receive broad “think more / create more strategy” work unless the task names at least one trigger:
 - runtime/QA finding;
 - real user evidence;
 - provider/platform change;
 - approved product-scope change;
-- new launch result;
-- new legal/finance constraint;
+- launch result;
+- legal/finance constraint;
 - explicit unresolved decision.
 
-This is a task-routing rule proposal, not a role-prompt change.
+### A5 — Source freshness must be mechanical
+Every release-relevant changed decision should carry:
 
-### A5 — Source freshness / executable-document hygiene
-When a decision changes:
-- mark stale executable instructions as superseded;
-- point to the new canonical source;
-- avoid leaving conflicting payment/release/build instructions in an apparently current state.
+`owner | canonical source | supersedes | implementation impact | Admin action required?`
 
-AI-heavy operations multiply the cost of stale docs because agents can execute them literally.
+Old executable instructions should be marked superseded/redirect-only rather than left looking current.
 
-### A6 — First 72h workforce telemetry once live
-Workforce needs a read-only report derived from current tables, not a new scoring system:
-- tasks created / done / blocked / abandoned-or-stale by agent;
-- blocked duration and blocker reason;
-- task reopen/duplicate fingerprint rate;
-- handoff count before completion;
-- Admin escalation count and disposition;
-- AI runs and token/neuron estimate per completed accepted task;
-- failed/re-run AI attempts;
-- output type: plan-only vs accepted artifact/action/evidence;
+### A6 — Research duplication cleanup
+Ask Research to choose the canonical source between:
+- `RESEARCH_CREATIVE_ALIGNMENT_STOPPING_GATE_V1.md`
+- `RESEARCH_CREATIVE_ALIGNMENT_STOP_GATE_V1.md`
+
+Workforce should not choose the domain winner.
+
+## Three additional operating optimizations
+
+### O1 — Admin Touch Budget
+Default assumption for a task should be **Admin not required**.
+
+Admin touch becomes mandatory only for:
+1. release/runtime change;
+2. source-of-truth conflict;
+3. security/legal/finance control conflict;
+4. implementation/deployment ownership.
+
+Measure after Company OS activation:
+- % of tasks requiring Admin touch;
+- median wait before Admin touch;
+- rework prevented vs delay introduced.
+
+Goal: preserve Admin authority while removing unnecessary queueing.
+
+### O2 — Evidence Expiry / Supersession header
+Release-relevant docs should expose a small machine-readable freshness header such as:
+
+`status: CURRENT | SUPERSEDED | HISTORICAL`
+`owner:`
+`supersedes:`
+`last_verified_against:`
+
+This can later power a simple stale-source warning without creating a new agent.
+
+Goal: stop AI workers from executing historical instructions literally.
+
+### O3 — Founder Decision Packet
+Founder should receive only decision-worthy packets, not raw status streams.
+
+Recommended packet fields:
+- `decision required`;
+- `why now`;
+- `options / tradeoff`;
+- `recommended operational default`;
+- `deadline or consequence of no decision`;
+- `evidence link`.
+
+If no Founder decision is required, route the item to Admin/owner and keep it out of Founder attention.
+
+Goal: protect Founder attention as a scarce company resource.
+
+## First live Workforce telemetry
+
+Once Company OS is activated, Workforce needs read-only reporting from existing records:
+- tasks created / done / blocked / stale by agent;
+- blocked duration + reason;
+- duplicate/reopened task fingerprint rate;
+- handoff count before acceptance;
+- Admin queue/wait time;
+- Admin escalation count + disposition;
+- Founder approval aging;
+- AI runs + estimated cost per accepted task;
+- reruns/failures;
+- plan-only vs accepted artifact/action/evidence;
 - source-of-truth conflict incidents.
 
-## Duplication watchlist
-
-### Confirmed
-Research alignment stopping gate duplicate.
-
-### Watch, do not merge yet
-- Marketing ↔ Growth / Content
-- Marketing ↔ Performance
-- Admin ↔ Founder Office
-
-Current evidence shows meaningful overlap, but also explicit boundary/reuse mechanisms. Real task/activity data is required before consolidation.
+No single fake performance score.
 
 ## Model/cost guidance
 
-Current Company OS cost posture is appropriate for V0:
+Current V0 posture remains appropriate:
 - Workers AI only;
 - no paid fallback;
-- explicit/due inference only;
-- per-agent run lease;
-- daily soft cap / scheduler reserve;
-- quota failure sleeps/defers instead of spending.
+- event/due inference only;
+- run leases;
+- atomic budget guard;
+- scheduler reserve;
+- bounded retry/defer behavior.
 
-Do not introduce role-specific expensive models yet.
+No role-specific upgrade/downgrade is justified yet.
 
-After live usage exists, evaluate model changes using:
-`cost per accepted outcome + rework + failure rate + latency`, not raw token volume.
+After live data exists, evaluate models using:
+`accepted outcome / AI runs / rework / failure / latency / estimated cost`.
 
-## Escalation policy for this audit
+## Authority / escalation
 
-### Admin can decide
+### Admin can review/adopt operationally
 - roster mapping format;
-- read-only workforce reporting implementation;
+- read-only workforce reporting;
 - source freshness workflow;
-- Research duplicate canonicalization request;
-- stop-trigger task-routing rule.
+- Research canonicalization request;
+- stop-trigger routing;
+- Admin Touch Budget experiment;
+- Founder Decision Packet format.
 
-### Founder approval required only if proposed later
-- registry expansion beyond agreed V0 scope;
-- role merger/retirement;
+### Founder approval required if later proposed
+- permanent role merge/retirement;
+- material registry expansion;
 - paid/high-cost model tier;
 - material permission/autonomy change.
 
@@ -148,10 +210,10 @@ After live usage exists, evaluate model changes using:
 Not “more agents working.”
 
 Desired state:
-- each task has one accountable owner;
-- strategy tasks stop when evidence value is exhausted;
-- blockers are attributed to environment vs role quality;
-- handoffs are measurable;
-- duplicate work is visible before it becomes another pack;
-- model cost is tied to accepted results;
-- Founder only receives decisions that actually require Founder authority.
+- one accountable owner per task;
+- fewer mandatory passes through Admin;
+- strategy stops when evidence value is exhausted;
+- blockers are attributed correctly;
+- stale sources self-identify;
+- Founder sees decisions, not company chatter;
+- model cost is tied to accepted outcomes.
