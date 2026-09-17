@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
+    "smoke": "bash scripts/smoke.sh",
     "db:create": "wrangler d1 create inspire-company-os-db",
     "db:migrate:local": "wrangler d1 migrations apply COMPANY_OS_DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply COMPANY_OS_DB --remote"
