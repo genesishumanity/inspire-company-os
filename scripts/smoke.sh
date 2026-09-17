@@ -49,8 +49,8 @@ if ! printf '%s' "$ACTIVITY_PLAN" | grep -q 'idx_activity_type_ts'; then
   exit 1
 fi
 
-# Lease contract: a due schedule can be claimed once and cannot be overwritten
-# while its lease is still active.
+# Scheduler lease contract: a due schedule can be claimed once and cannot be
+# overwritten while its lease is still active.
 sqlite3 "$DB_FILE" "insert into schedules(agent_id,title,instruction,recurrence,next_run_at) values('research','lease smoke','test','once',datetime('now','-1 minute'));"
 SCHEDULE_ID="$(sqlite3 "$DB_FILE" "select max(id) from schedules;")"
 sqlite3 "$DB_FILE" "update schedules set claim_token='claim-a',lease_until=datetime('now','+10 minutes'),attempt_count=attempt_count+1 where id=$SCHEDULE_ID and enabled=1 and datetime(next_run_at)<=datetime('now') and (lease_until is null or datetime(lease_until)<datetime('now'));"
@@ -65,6 +65,35 @@ fi
 LEASE_INDEX="$(sqlite3 "$DB_FILE" "select count(*) from sqlite_master where type='index' and name='idx_schedules_due_lease';")"
 if [ "$LEASE_INDEX" != "1" ]; then
   echo "Expected scheduler lease index" >&2
+  exit 1
+fi
+
+# Per-agent AI lease contract: one active run blocks a second claim, an expired
+# lease may be reclaimed, and a stale/wrong token cannot release the live run.
+sqlite3 "$DB_FILE" "update agents set run_token='run-a',run_lease_until=datetime('now','+10 minutes'),last_run_started_at=current_timestamp where id='research' and (run_lease_until is null or datetime(run_lease_until)<=datetime('now'));"
+sqlite3 "$DB_FILE" "update agents set run_token='run-b',run_lease_until=datetime('now','+10 minutes') where id='research' and (run_lease_until is null or datetime(run_lease_until)<=datetime('now'));"
+AGENT_RUN_TOKEN="$(sqlite3 "$DB_FILE" "select run_token from agents where id='research';")"
+if [ "$AGENT_RUN_TOKEN" != "run-a" ]; then
+  echo "Agent run lease did not block a concurrent claim" >&2
+  exit 1
+fi
+sqlite3 "$DB_FILE" "update agents set run_token=null,run_lease_until=null where id='research' and run_token='wrong-token';"
+AGENT_RUN_TOKEN_AFTER_WRONG_RELEASE="$(sqlite3 "$DB_FILE" "select run_token from agents where id='research';")"
+if [ "$AGENT_RUN_TOKEN_AFTER_WRONG_RELEASE" != "run-a" ]; then
+  echo "Wrong run token released another agent execution" >&2
+  exit 1
+fi
+sqlite3 "$DB_FILE" "update agents set run_lease_until=datetime('now','-1 minute') where id='research';"
+sqlite3 "$DB_FILE" "update agents set run_token='run-c',run_lease_until=datetime('now','+10 minutes'),last_run_started_at=current_timestamp where id='research' and (run_lease_until is null or datetime(run_lease_until)<=datetime('now'));"
+AGENT_RUN_TOKEN_RECLAIMED="$(sqlite3 "$DB_FILE" "select run_token from agents where id='research';")"
+if [ "$AGENT_RUN_TOKEN_RECLAIMED" != "run-c" ]; then
+  echo "Expired agent run lease could not be reclaimed" >&2
+  exit 1
+fi
+sqlite3 "$DB_FILE" "update agents set run_token=null,run_lease_until=null where id='research' and run_token='run-c';"
+AGENT_RUN_TOKEN_RELEASED="$(sqlite3 "$DB_FILE" "select coalesce(run_token,'') from agents where id='research';")"
+if [ -n "$AGENT_RUN_TOKEN_RELEASED" ]; then
+  echo "Matching agent run token did not release the lease" >&2
   exit 1
 fi
 
