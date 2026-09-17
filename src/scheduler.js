@@ -28,9 +28,8 @@ export function nextRecurringTime(recurrence, scheduledAt, nowMs = Date.now()) {
   const scheduledMs = new Date(scheduledAt).getTime();
   if (!periodMs || Number.isNaN(scheduledMs)) throw new Error('invalid_recurring_schedule');
 
-  // Anchor recurrence to the originally scheduled slot, not the time the cron
-  // happened to execute. If the Worker was late/offline, skip missed slots and
-  // pick the first future slot instead of permanently drifting the cadence.
+  // Anchor recurrence to the planned slot, never the retry/execution timestamp.
+  // Missed slots are skipped; the first future slot wins so there is no burst replay.
   if (scheduledMs > nowMs) return new Date(scheduledMs).toISOString();
   const elapsedSlots = Math.floor((nowMs - scheduledMs) / periodMs) + 1;
   return new Date(scheduledMs + elapsedSlots * periodMs).toISOString();
@@ -75,6 +74,8 @@ async function claimSchedule(env, id) {
 
 async function finishSuccess(env, schedule) {
   let nextRunAt = null;
+  const cadenceFrom = schedule.cadence_anchor_at || schedule.next_run_at;
+
   if (schedule.recurrence === 'once') {
     await env.COMPANY_OS_DB.prepare(
       `UPDATE schedules
@@ -83,19 +84,20 @@ async function finishSuccess(env, schedule) {
        WHERE id=? AND claim_token=?`
     ).bind(schedule.id, schedule.claim_token).run();
   } else {
-    nextRunAt = nextRecurringTime(schedule.recurrence, schedule.next_run_at);
+    nextRunAt = nextRecurringTime(schedule.recurrence, cadenceFrom);
     await env.COMPANY_OS_DB.prepare(
       `UPDATE schedules
-       SET last_run_at=CURRENT_TIMESTAMP,next_run_at=?,claim_token=NULL,lease_until=NULL,
+       SET last_run_at=CURRENT_TIMESTAMP,next_run_at=?,cadence_anchor_at=?,claim_token=NULL,lease_until=NULL,
            consecutive_failures=0,last_error=NULL,updated_at=CURRENT_TIMESTAMP
        WHERE id=? AND claim_token=?`
-    ).bind(nextRunAt, schedule.id, schedule.claim_token).run();
+    ).bind(nextRunAt, nextRunAt, schedule.id, schedule.claim_token).run();
   }
 
   const details = {
     scheduleId: schedule.id,
     recurrence: schedule.recurrence,
-    scheduledFrom: schedule.next_run_at,
+    cadenceFrom,
+    attemptedAt: schedule.next_run_at,
     nextRunAt,
   };
   await activity(env, schedule.agent_id, 'schedule_completed', `${schedule.title} completed`, details, schedule.id);
@@ -103,6 +105,7 @@ async function finishSuccess(env, schedule) {
 }
 
 async function deferSchedule(env, schedule, reason, retryAt) {
+  const cadenceAnchorAt = schedule.cadence_anchor_at || schedule.next_run_at;
   await env.COMPANY_OS_DB.prepare(
     `UPDATE schedules
      SET next_run_at=?,claim_token=NULL,lease_until=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP
@@ -112,15 +115,17 @@ async function deferSchedule(env, schedule, reason, retryAt) {
     scheduleId: schedule.id,
     reason: clean(reason, 500),
     retryAt,
+    cadenceAnchorAt,
     paidFallbackUsed: false,
   }, schedule.id);
-  await audit(env, 'schedule_deferred', schedule.id, { reason: clean(reason, 500), retryAt, paidFallbackUsed: false });
+  await audit(env, 'schedule_deferred', schedule.id, { reason: clean(reason, 500), retryAt, cadenceAnchorAt, paidFallbackUsed: false });
 }
 
 async function failSchedule(env, schedule, reason) {
   const nextFailures = Number(schedule.consecutive_failures || 0) + 1;
   const terminal = nextFailures >= MAX_CONSECUTIVE_FAILURES;
   const retryAt = isoAfterMinutes(Math.min(120, 30 * nextFailures));
+  const cadenceAnchorAt = schedule.cadence_anchor_at || schedule.next_run_at;
 
   await env.COMPANY_OS_DB.prepare(
     `UPDATE schedules
@@ -133,11 +138,13 @@ async function failSchedule(env, schedule, reason) {
     consecutiveFailures: nextFailures,
     reason: clean(reason, 500),
     retryAt: terminal ? null : retryAt,
+    cadenceAnchorAt,
   }, schedule.id);
   await audit(env, terminal ? 'schedule_blocked' : 'schedule_retry', schedule.id, {
     consecutiveFailures: nextFailures,
     reason: clean(reason, 500),
     retryAt: terminal ? null : retryAt,
+    cadenceAnchorAt,
   });
 
   if (terminal) {
@@ -175,6 +182,7 @@ export async function runDueSchedules(env) {
         scheduleId: schedule.id,
         leaseUntil: schedule.lease_until,
         attemptCount: schedule.attempt_count,
+        cadenceAnchorAt: schedule.cadence_anchor_at || schedule.next_run_at,
       }, schedule.id);
 
       const result = await runAgent(
