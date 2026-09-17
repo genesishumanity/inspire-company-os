@@ -47,14 +47,21 @@ export async function authorizeRequest(request, env) {
     });
 
     const email = String(payload.email || '').trim().toLowerCase();
+    // Company OS V0 is an interactive human-only internal surface. Cloudflare
+    // service-token application JWTs do not carry a human email identity, so
+    // reject them even if an Access policy is accidentally broadened later.
+    if (!email) {
+      return { ok: false, status: 403, error: 'access_human_identity_required' };
+    }
+
     const allowlist = allowedEmails(env);
-    if (allowlist.length && (!email || !allowlist.includes(email))) {
+    if (allowlist.length && !allowlist.includes(email)) {
       return { ok: false, status: 403, error: 'access_identity_not_allowed' };
     }
 
     return {
       ok: true,
-      email: email || String(payload.sub || 'access-user'),
+      email,
       subject: String(payload.sub || ''),
       claims: payload,
     };
