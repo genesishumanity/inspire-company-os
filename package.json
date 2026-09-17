@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --local --var AUTH_MODE:local",
-    "check": "node --check src/index.js && node --check src/ui.js && node --check src/auth.js && node --check src/scheduler.js && node --check src/entry.js && node --check scripts/predeploy.mjs && node --check tests/runtime-contract.mjs && node --check tests/scheduler-cadence.mjs && node --check tests/ui-live-office-contract.mjs && node tests/ui-live-office-contract.mjs",
+    "check": "node --check src/index.js && node --check src/ui.js && node --check src/preview-entry.js && node --check src/auth.js && node --check src/scheduler.js && node --check src/entry.js && node --check scripts/predeploy.mjs && node --check tests/runtime-contract.mjs && node --check tests/scheduler-cadence.mjs && node --check tests/ui-live-office-contract.mjs && node tests/ui-live-office-contract.mjs",
     "deploy": "node scripts/predeploy.mjs && wrangler deploy",
+    "deploy:preview": "wrangler deploy -c wrangler.preview.toml",
     "smoke": "bash scripts/smoke.sh",
     "db:create": "wrangler d1 create inspire-company-os-db",
     "db:migrate:local": "wrangler d1 migrations apply COMPANY_OS_DB --local",
