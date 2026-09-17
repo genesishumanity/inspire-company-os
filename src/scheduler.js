@@ -18,6 +18,12 @@ function nextUtcReset() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 5, 0)).toISOString();
 }
 
+function deferredRetryAt(reason) {
+  if (reason === 'daily_soft_cap') return nextUtcReset();
+  if (reason === 'agent_busy') return isoAfterMinutes(5);
+  return isoAfterMinutes(15);
+}
+
 export function nextRecurringTime(recurrence, scheduledAt, nowMs = Date.now()) {
   const periods = {
     hourly: 60 * 60_000,
@@ -195,8 +201,7 @@ export async function runDueSchedules(env) {
 
       if (result?.deferred) {
         const reason = result.reason || 'ai_deferred';
-        const retryAt = reason === 'daily_soft_cap' ? nextUtcReset() : isoAfterMinutes(15);
-        await deferSchedule(env, schedule, reason, retryAt);
+        await deferSchedule(env, schedule, reason, deferredRetryAt(reason));
         continue;
       }
 
