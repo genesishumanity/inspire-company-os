@@ -26,7 +26,7 @@ Sources:
 1. **No paid model fallback.** `AI_MODEL` defaults to a Workers AI model available on the Free plan.
 2. **No idle inference.** Messages and UI polling never invoke AI.
 3. **Explicit/due-event only.** AI runs only through an explicit agent run or due schedule.
-4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP` defaults to `100` Company OS AI requests per UTC day.
+4. **Daily request soft cap.** `AI_DAILY_REQUEST_SOFT_CAP` defaults to `50` Company OS AI requests per UTC day. This is deliberately conservative because request count is not the same thing as billed Neurons.
 5. **Quota/capacity failure = sleep/defer.** If Workers AI returns quota/rate/capacity style errors, the agent is put into `sleeping`, a Founder Inbox approval/attention item is created, and no paid provider is attempted.
 6. **Non-quota runtime failure = blocked.** The agent becomes `blocked` for review rather than retry-looping.
 7. **Cron work is bounded.** A cron invocation processes at most three due schedules.
@@ -46,14 +46,14 @@ Cloudflare's model binding does not guarantee an exact billed-Neuron value in ev
 
 Within the Free plan, `estimated_cost_usd` remains `0` because there is no paid fallback path.
 
-## Recommended alert thresholds
+## Recommended operating thresholds
 
-These are operating thresholds, not claims about Cloudflare billing:
+These are Company OS guardrails, not claims about Cloudflare billing:
 
-- 50 AI runs/day: review whether schedules are too chatty.
-- 80 AI runs/day: stop adding recurring schedules that day.
-- 100 AI runs/day: Company OS soft-defer all further AI runs until UTC reset.
-- Any Cloudflare quota/capacity error: sleep affected agent and surface Founder attention.
+- 25 AI runs/day: review whether recurring schedules are too chatty.
+- 40 AI runs/day: avoid adding more recurring AI work that day.
+- 50 AI runs/day: soft-defer all further Company OS AI runs until UTC reset.
+- Any Cloudflare quota/capacity error: sleep affected agent and surface Founder attention immediately.
 
 ## D1 efficiency rules
 
