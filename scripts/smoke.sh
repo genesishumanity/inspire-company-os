@@ -3,6 +3,7 @@ set -euo pipefail
 
 npm run check
 node tests/runtime-contract.mjs
+node tests/scheduler-cadence.mjs
 
 DB_FILE="${TMPDIR:-/tmp}/inspire-company-os-smoke.db"
 rm -f "$DB_FILE"
