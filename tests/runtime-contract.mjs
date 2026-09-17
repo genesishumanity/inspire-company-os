@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const entry = fs.readFileSync('src/entry.js', 'utf8');
 const index = fs.readFileSync('src/index.js', 'utf8');
 const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
+const approvalIntegrity = fs.readFileSync('migrations/0005_approval_integrity.sql', 'utf8');
 const ui = fs.readFileSync('src/ui.js', 'utf8');
 const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
 
@@ -44,6 +45,11 @@ expect(entry, /storage_deferred/, 'D1 quota graceful defer');
 expect(entry, /schedule_guard_deferred/, 'scheduler soft-cap preservation guard');
 expect(entry, /const reserve = 3;/, 'scheduler capacity reserve');
 expect(entry, /runDueSchedules\(env\)/, 'cron routes through leased scheduler');
+expect(entry, /manual_status_disabled/, 'production manual status disabled');
+expect(entry, /FOUNDER_APPROVER_EMAILS/, 'Founder-only approval allowlist');
+expect(entry, /founder_approval_required/, 'task approval gate');
+expect(entry, /cross_site_mutation_blocked/, 'cross-site mutation guard');
+expect(entry, /application_json_required/, 'JSON mutation contract');
 reject(entry, /url\.pathname === ['\"]\/health['\"].*return app\.fetch/s, 'public health bypass');
 reject(entry, /app\.scheduled\(/, 'legacy unleased cron execution');
 
@@ -55,6 +61,10 @@ expect(scheduler, /MAX_CONSECUTIVE_FAILURES = 3/, 'scheduler terminal failure th
 expect(scheduler, /schedule_blocked/, 'terminal schedule block event');
 expect(scheduler, /founder_attention/, 'terminal failure routes to Founder Inbox');
 expect(scheduler, /paidFallbackUsed: false/, 'scheduler paid fallback prohibition');
+
+expect(approvalIntegrity, /approval_not_granted/, 'database approval gate');
+expect(approvalIntegrity, /trg_rejected_approval_blocks_task/, 'rejection blocks linked task');
+expect(approvalIntegrity, /approval_link_required/, 'approval link integrity');
 
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
