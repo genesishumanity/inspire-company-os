@@ -48,6 +48,25 @@ if ! printf '%s' "$ACTIVITY_PLAN" | grep -q 'idx_activity_type_day'; then
   exit 1
 fi
 
+# Lease contract: a due schedule can be claimed once and cannot be overwritten
+# while its lease is still active.
+sqlite3 "$DB_FILE" "insert into schedules(agent_id,title,instruction,recurrence,next_run_at) values('research','lease smoke','test','once',datetime('now','-1 minute'));"
+SCHEDULE_ID="$(sqlite3 "$DB_FILE" "select max(id) from schedules;")"
+sqlite3 "$DB_FILE" "update schedules set claim_token='claim-a',lease_until=datetime('now','+10 minutes'),attempt_count=attempt_count+1 where id=$SCHEDULE_ID and enabled=1 and datetime(next_run_at)<=datetime('now') and (lease_until is null or datetime(lease_until)<datetime('now'));"
+sqlite3 "$DB_FILE" "update schedules set claim_token='claim-b' where id=$SCHEDULE_ID and enabled=1 and datetime(next_run_at)<=datetime('now') and (lease_until is null or datetime(lease_until)<datetime('now'));"
+CLAIM_TOKEN="$(sqlite3 "$DB_FILE" "select claim_token from schedules where id=$SCHEDULE_ID;")"
+ATTEMPTS="$(sqlite3 "$DB_FILE" "select attempt_count from schedules where id=$SCHEDULE_ID;")"
+if [ "$CLAIM_TOKEN" != "claim-a" ] || [ "$ATTEMPTS" != "1" ]; then
+  echo "Scheduler lease did not prevent a duplicate claim" >&2
+  exit 1
+fi
+
+LEASE_INDEX="$(sqlite3 "$DB_FILE" "select count(*) from sqlite_master where type='index' and name='idx_schedules_due_lease';")"
+if [ "$LEASE_INDEX" != "1" ]; then
+  echo "Expected scheduler lease index" >&2
+  exit 1
+fi
+
 grep -q '^workers_dev = false$' wrangler.toml
 grep -q '^preview_urls = false$' wrangler.toml
 grep -q '^main = "src/entry.js"$' wrangler.toml
