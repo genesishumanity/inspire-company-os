@@ -145,6 +145,13 @@ After activation, authenticate through Cloudflare Access and verify:
 
 ## HQ World vanilla preview evidence — 2026-09-17
 
+### Native Pixel Agents renderer follow-up
+
+- Changed: replaced the HQ canvas background/primitive character path with an asset-backed Pixel Agents renderer using upstream MIT floor, wall, furniture and character PNGs.
+- Why: establish the Sanalika-like interactive world foundation without changing Company OS state, API, or backend behavior.
+- Validation: `npm run check`, `git diff --check`, `node tests/ui-live-office-contract.mjs`, and `node tests/world-engine-contract.mjs` pass.
+- Remaining unproven: preview deployment and browser smoke test after this change.
+
 Changed the preview HQ from the earlier cinematic/DOM office experiment to a vanilla Pixel Agents-style Canvas world driven only by Company OS `/api/bootstrap`. The world adapter maps the five current presences, status transitions, backend events, pathfinding destinations, character animation modes, and real `agent_output` speech bubbles without exposing D1 credentials, secrets, prompts, transcripts, emails, customer data, filesystem access, WebSockets, terminal hooks, or upstream transcript scanners to the renderer.
 
 Validation run:

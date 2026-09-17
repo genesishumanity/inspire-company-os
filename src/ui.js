@@ -31,10 +31,12 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated}.drawer{bo
 </div>
 <script type="module">
 import { AGENT_ROSTER, findPath, normalizeWorldPayload } from '/world-engine.js';
+import { createPixelAgentsRenderer } from '/pixel-agents-native.js';
 
 const canvas = document.getElementById('worldCanvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+const pixelRenderer = createPixelAgentsRenderer(canvas);
 
 const TILE = 32;
 const COLS = 25;
@@ -142,13 +144,9 @@ function render() {
   }
   ctx.setTransform(dpr * state.zoom, 0, 0, dpr * state.zoom, dpr * state.panX, dpr * state.panY);
   ctx.clearRect(-state.panX / state.zoom, -state.panY / state.zoom, canvas.width, canvas.height);
-  const bg = ctx.createLinearGradient(0, 0, 0, ROWS * TILE);
-  bg.addColorStop(0, '#191719'); bg.addColorStop(.55, '#2b2927'); bg.addColorStop(1, '#17181b');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, COLS * TILE, ROWS * TILE);
-  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    ctx.fillStyle = (x + y) % 2 ? '#4a443d' : '#514a42';
-    ctx.fillRect(x * TILE, y * TILE, TILE - 1, TILE - 1);
-  }
+  pixelRenderer.render({ characters: state.characters, roster: AGENT_ROSTER, now });
+  return;
+/*
   ctx.fillStyle = 'rgba(245,184,105,.12)'; ctx.beginPath(); ctx.ellipse(13 * TILE, 8 * TILE, 190, 110, 0, 0, Math.PI * 2); ctx.fill();
   drawRoom(2 * TILE, 1 * TILE, 6 * TILE, 4 * TILE, 'FOUNDER', '#b54cff');
   drawRoom(2 * TILE, 6 * TILE, 7 * TILE, 4 * TILE, 'RESEARCH', '#9f79ff');
@@ -173,6 +171,7 @@ function render() {
   ctx.fillStyle = '#b54cff'; ctx.font = 'bold 12px ui-sans-serif'; ctx.fillText('INSPIRE HQ CANVAS WORLD', 10 * TILE + 12, 6 * TILE + 20);
   const chars = [...state.characters.values()].sort((a, b) => a.y - b.y);
   for (const ch of chars) drawCharacter(ch);
+*/
 }
 
 function drawCharacter(ch) {
