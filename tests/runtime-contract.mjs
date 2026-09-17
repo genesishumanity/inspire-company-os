@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const entry = fs.readFileSync('src/entry.js', 'utf8');
 const index = fs.readFileSync('src/index.js', 'utf8');
+const scheduler = fs.readFileSync('src/scheduler.js', 'utf8');
 const ui = fs.readFileSync('src/ui.js', 'utf8');
 const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
 
@@ -42,11 +43,22 @@ expect(entry, /access_not_configured/, 'fail-closed Access configuration');
 expect(entry, /storage_deferred/, 'D1 quota graceful defer');
 expect(entry, /schedule_guard_deferred/, 'scheduler soft-cap preservation guard');
 expect(entry, /const reserve = 3;/, 'scheduler capacity reserve');
+expect(entry, /runDueSchedules\(env\)/, 'cron routes through leased scheduler');
 reject(entry, /url\.pathname === ['\"]\/health['\"].*return app\.fetch/s, 'public health bypass');
+reject(entry, /app\.scheduled\(/, 'legacy unleased cron execution');
+
+expect(scheduler, /MAX_RUNS_PER_TICK = 3/, 'bounded scheduler batch');
+expect(scheduler, /claim_token/, 'atomic scheduler claim token');
+expect(scheduler, /lease_until/, 'scheduler lease expiry');
+expect(scheduler, /consecutive_failures/, 'scheduler failure circuit breaker');
+expect(scheduler, /MAX_CONSECUTIVE_FAILURES = 3/, 'scheduler terminal failure threshold');
+expect(scheduler, /schedule_blocked/, 'terminal schedule block event');
+expect(scheduler, /founder_attention/, 'terminal failure routes to Founder Inbox');
+expect(scheduler, /paidFallbackUsed: false/, 'scheduler paid fallback prohibition');
+
 expect(index, /paid fallback/i, 'no-paid-fallback AI guardrail');
 expect(index, /AI_DAILY_REQUEST_SOFT_CAP/, 'AI daily soft cap');
 expect(index, /createFounderNotice/, 'Founder attention/approval path');
-expect(index, /processSchedules/, 'bounded scheduled work processing');
 expect(ui, /founder/i, 'Founder Inbox UI surface');
 expect(wrangler, /workers_dev = false/, 'workers.dev disabled');
 expect(wrangler, /preview_urls = false/, 'preview URLs disabled');
