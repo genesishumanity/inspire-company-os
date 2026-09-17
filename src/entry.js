@@ -1,5 +1,6 @@
 import app from './index.js';
 import { authorizeRequest } from './auth.js';
+import { runDueSchedules } from './scheduler.js';
 
 const SAFE_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -139,23 +140,27 @@ async function securedFetch(request, env, ctx) {
   }
 }
 
-async function scheduledFetch(controller, env, ctx) {
-  // index.js processes at most 3 due schedules per cron tick. Keep a three-request
-  // reserve so a near-soft-cap cron cannot start work that runAgent() would defer
-  // and then accidentally advance as completed.
+async function scheduledFetch(_controller, env, ctx) {
+  // Keep enough headroom for a full cron batch. This prevents a scheduled tick
+  // from consuming the final free AI requests and then losing due work.
   const reserve = 3;
   const softCap = Math.max(1, Number(env.AI_DAILY_REQUEST_SOFT_CAP || 100));
 
   try {
     const usage = await env.COMPANY_OS_DB.prepare(
-      `SELECT COUNT(*) AS requests FROM ai_usage WHERE date(ts) = date('now')`
+      `SELECT COUNT(*) AS requests
+       FROM ai_usage
+       WHERE ts >= date('now')
+         AND ts < datetime(date('now'), '+1 day')`
     ).first();
     const requests = Number(usage?.requests || 0);
 
     if (requests + reserve > softCap) {
       const alreadyLogged = await env.COMPANY_OS_DB.prepare(
         `SELECT id FROM activity_events
-         WHERE event_type='schedule_guard_deferred' AND date(ts)=date('now')
+         WHERE event_type='schedule_guard_deferred'
+           AND ts >= date('now')
+           AND ts < datetime(date('now'), '+1 day')
          ORDER BY id DESC LIMIT 1`
       ).first();
 
@@ -176,13 +181,13 @@ async function scheduledFetch(controller, env, ctx) {
       }
       return;
     }
-  } catch (error) {
-    // Fail closed for scheduled inference. If D1 itself is unavailable or quota-limited,
-    // preserving the schedule is safer than attempting work without the guardrail.
+  } catch {
+    // Fail closed for scheduled inference. If D1 is unavailable or quota-limited,
+    // preserving due schedules is safer than attempting work without guardrails.
     return;
   }
 
-  return app.scheduled(controller, env, ctx);
+  ctx.waitUntil(runDueSchedules(env));
 }
 
 export default {
