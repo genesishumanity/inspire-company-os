@@ -341,6 +341,47 @@ async function route(request, env) {
     return json(result.results || []);
   }
 
+  // ChatGPT bridge: stable identity map for a future authenticated MCP/plugin layer.
+  // This does not pretend normal ChatGPT conversations are background runtimes.
+  if (method === 'GET' && path === '/api/chatgpt/identities') {
+    const result = await env.COMPANY_OS_DB.prepare(
+      `SELECT id,name,department,status,status_reason,updated_at FROM agents ORDER BY name`
+    ).all();
+    return json({
+      version: 1,
+      transport: 'company-os',
+      agents: (result.results || []).map((agent) => ({
+        chatgpt_identity: agent.id,
+        company_os_agent_id: agent.id,
+        name: agent.name,
+        department: agent.department,
+        status: agent.status,
+        status_reason: agent.status_reason,
+        updated_at: agent.updated_at,
+      })),
+    });
+  }
+
+  match = path.match(/^\/api\/chatgpt\/agents\/([a-z0-9-]+)\/events$/);
+  if (method === 'POST' && match) {
+    const agent = await getAgent(env, match[1]);
+    if (!agent) return json({ error: 'agent_not_found' }, 404);
+    const payload = await bodyJson(request);
+    const kind = clean(payload.kind, 80);
+    const summary = clean(payload.summary, 1000);
+    if (!['chatgpt_note','chatgpt_output','chatgpt_handoff'].includes(kind) || !summary) {
+      return json({ error: 'valid_kind_and_summary_required' }, 400);
+    }
+    const detail = clean(payload.detail, 8000);
+    await activity(env, agent.id, kind, summary, {
+      detail: detail || null,
+      conversation_ref: clean(payload.conversation_ref, 300) || null,
+      source: 'chatgpt_bridge',
+    }, 'agent', agent.id);
+    await audit(env, 'human', actorFrom(request), 'chatgpt_bridge_event', 'agent', agent.id, { kind });
+    return json({ ok: true, agent_id: agent.id, kind }, 201);
+  }
+
   let match = path.match(/^\/api\/agents\/([a-z0-9-]+)$/);
   if (method === 'GET' && match) {
     const id = match[1];
