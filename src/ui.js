@@ -2,85 +2,289 @@ export function renderOffice() {
   return String.raw`<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>INSPIRE Company OS</title>
-  <style>
-    :root{color-scheme:dark;--bg:#080a0d;--panel:#10151b;--panel2:#151b22;--line:#27313b;--text:#f2f6f8;--muted:#8d99a7;--accent:#9ed8ff;--good:#8ce99a;--warn:#ffd166;--bad:#ff7b7b;--violet:#c3a6ff;--skin:#e8bea2}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -20%,#152230 0,transparent 40%),var(--bg);color:var(--text);font:14px/1.45 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.shell{max-width:1600px;margin:0 auto;padding:22px}.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}.brand h1{margin:0;font-size:26px;letter-spacing:-.04em}.brand p{margin:4px 0 0;color:var(--muted)}.stats{display:flex;gap:8px;flex-wrap:wrap}.stat{background:rgba(16,21,27,.9);border:1px solid var(--line);padding:9px 11px;border-radius:10px;min-width:92px}.stat b{display:block;font-size:16px}.stat span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(330px,.72fr);gap:14px}.panel{background:rgba(16,21,27,.94);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.2)}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--line)}.panel-head h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0}.panel-head span{color:var(--muted);font-size:12px}
-    .office{padding:18px;min-height:560px;background:linear-gradient(90deg,transparent 49.6%,rgba(70,92,113,.12) 49.6%,rgba(70,92,113,.12) 50.4%,transparent 50.4%),linear-gradient(0deg,transparent 49.6%,rgba(70,92,113,.12) 49.6%,rgba(70,92,113,.12) 50.4%,transparent 50.4%);background-size:92px 92px}.office-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.agent{position:relative;background:linear-gradient(145deg,rgba(19,26,34,.98),rgba(12,16,21,.98));border:1px solid var(--line);border-radius:14px;padding:14px;min-height:238px;overflow:hidden}.agent.active{border-color:#3f5d70;box-shadow:inset 0 0 32px rgba(158,216,255,.04)}.agent.speaking{border-color:#5f8ca8}.agent-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.agent h3{margin:0 0 2px;font-size:16px}.dept,.muted,.meta{color:var(--muted);font-size:12px}.status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:4px 7px;border-radius:999px;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.dot{width:7px;height:7px;border-radius:50%;background:#727b86}.working .dot{background:var(--good)}.thinking .dot{background:var(--accent);box-shadow:0 0 0 4px rgba(158,216,255,.08)}.waiting .dot{background:var(--warn)}.blocked .dot{background:var(--bad)}.reviewing .dot{background:var(--violet)}.sleeping .dot{background:#66707b}
-    .scene{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;align-items:center;margin:15px 0 12px}.avatar-wrap{height:116px;display:flex;align-items:flex-end;justify-content:center;position:relative}.avatar{width:72px;height:106px;position:relative;filter:drop-shadow(0 10px 12px rgba(0,0,0,.25));transform-origin:50% 100%}.agent.active .avatar{animation:workBob 2.8s ease-in-out infinite}.head{position:absolute;left:18px;top:4px;width:38px;height:42px;border-radius:44% 44% 46% 46%;background:var(--skin);border:2px solid #11171d;z-index:3}.hair{position:absolute;left:16px;top:0;width:42px;height:20px;background:#17202a;border-radius:20px 20px 9px 9px;z-index:4}.eye{position:absolute;top:20px;width:4px;height:4px;border-radius:50%;background:#1a222a;z-index:5}.eye.l{left:28px}.eye.r{left:43px}.mouth{position:absolute;left:34px;top:34px;width:8px;height:2px;border-radius:4px;background:#6e3f3f;z-index:5;transform-origin:center}.agent.speaking .mouth{animation:talk .34s steps(2,end) infinite}.body2d{position:absolute;left:13px;top:44px;width:48px;height:57px;border-radius:17px 17px 8px 8px;background:#263544;border:2px solid #11171d}.body2d:after{content:"";position:absolute;left:7px;right:7px;bottom:9px;height:3px;border-radius:4px;background:rgba(158,216,255,.45)}.desk{position:absolute;bottom:0;left:5px;right:5px;height:12px;border-radius:4px 4px 2px 2px;background:#252e37;border-top:2px solid #3a4652}.screen2d{position:absolute;left:2px;bottom:12px;width:30px;height:23px;border:2px solid #202a33;border-radius:4px;background:#0a1117;box-shadow:inset 0 0 12px rgba(158,216,255,.2)}.screen2d:after{content:"";position:absolute;left:5px;right:5px;top:6px;height:2px;background:rgba(158,216,255,.5);box-shadow:0 5px 0 rgba(140,233,154,.35)}
-    .bubble{position:relative;min-height:84px;background:#f5f8fa;color:#10161c;border-radius:13px;padding:11px 12px;box-shadow:0 8px 24px rgba(0,0,0,.16)}.bubble:before{content:"";position:absolute;left:-9px;bottom:18px;border-width:8px 10px 8px 0;border-style:solid;border-color:transparent #f5f8fa transparent transparent}.bubble.quiet{background:#151d25;color:#b9c3cc;border:1px solid #26323d;box-shadow:none}.bubble.quiet:before{border-right-color:#26323d}.bubble-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#53606c}.bubble.quiet .bubble-label{color:#7f8c98}.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#42d77d;margin-right:4px}.bubble-text{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.agent-foot{display:flex;justify-content:space-between;gap:10px;align-items:flex-end}.reason{color:var(--muted);font-size:11px;max-width:62%}.actions{display:flex;gap:7px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:7px 9px}.btn:hover{border-color:#46515e}.btn.primary{background:#d8efff;color:#071018;border-color:#d8efff}.btn.good{border-color:#406948}.btn.bad{border-color:#814848}
-    .side{display:grid;gap:14px;align-content:start}.scroll{max-height:320px;overflow:auto}.feed-item,.inbox-item,.row{padding:11px 13px;border-bottom:1px solid var(--line)}.feed-item:last-child,.inbox-item:last-child,.row:last-child{border-bottom:0}.feed-type{color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.lower{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.form{padding:12px;display:grid;gap:8px;border-top:1px solid var(--line)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}input,select,textarea{width:100%;background:#0d1116;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}textarea{min-height:72px;resize:vertical}.task-title,.msg-title{font-weight:650}.task-line{display:flex;justify-content:space-between;gap:8px;align-items:center}.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 6px;color:var(--muted);font-size:10px;text-transform:uppercase}.empty{padding:20px;color:var(--muted);text-align:center}.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.open{display:flex}.modal-card{width:min(760px,100%);max-height:86vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}.modal-head{position:sticky;top:0;background:var(--panel);display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid var(--line)}.modal-body{padding:14px}.error{position:fixed;right:20px;bottom:20px;background:#2a1111;border:1px solid #6e3434;color:#ffd1d1;padding:10px 12px;border-radius:10px;display:none;z-index:50}.error.show{display:block}.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--good);margin-right:5px}@keyframes talk{0%{height:2px;transform:scaleX(1)}100%{height:7px;transform:scaleX(.72)}}@keyframes workBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}@media(prefers-reduced-motion:reduce){.agent.active .avatar,.agent.speaking .mouth{animation:none}}@media(max-width:980px){.grid,.lower{grid-template-columns:1fr}.office-grid{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>INSPIRE Company OS HQ World</title>
+<style>
+:root{color-scheme:dark;--bg:#08090d;--panel:#11141b;--line:#2b303a;--text:#f4f6fb;--muted:#9aa3b2;--purple:#b54cff;--good:#50e39a;--warn:#f6c453;--bad:#ff6b78}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{font:inherit}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:100vh}.world{position:relative;min-width:0;background:#07090f}.bar{position:absolute;left:16px;top:16px;z-index:3;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(10,12,18,.84);backdrop-filter:blur(10px)}.mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(145deg,var(--purple),#6838ff);display:grid;place-items:center;font-weight:900;font-size:20px}.bar b{display:block}.bar span{display:block;color:var(--muted);font-size:10px}.poll{margin-left:8px;padding-left:10px;border-left:1px solid var(--line);font-size:10px;color:var(--muted)}
+canvas{width:100%;height:100%;display:block;image-rendering:pixelated}.drawer{border-left:1px solid var(--line);background:var(--panel);overflow:auto}.section{padding:14px;border-bottom:1px solid var(--line)}h1,h2{margin:0}h1{font-size:16px}h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#cbd1dd}.muted{color:var(--muted);font-size:11px}.row{padding:10px 0;border-top:1px solid #222833}.row:first-of-type{border-top:0}.agent{display:flex;justify-content:space-between;gap:10px;align-items:start}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--warn)}.working .dot,.thinking .dot,.reviewing .dot{background:var(--good)}.blocked .dot{background:var(--bad)}.sleeping .dot{background:#6f7683}.pill{display:inline-flex;align-items:center;border:1px solid #343b48;border-radius:999px;padding:2px 7px;font-size:10px;color:#ccd3df}.event{color:#d8dce6}.controls{position:absolute;right:16px;top:16px;z-index:3;display:flex;gap:8px}.controls button{width:36px;height:36px;border:1px solid var(--line);border-radius:9px;background:rgba(10,12,18,.84);color:var(--text)}.legend{position:absolute;left:16px;bottom:16px;z-index:3;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(10,12,18,.84);color:var(--muted);font-size:10px}.error{position:absolute;right:16px;bottom:16px;z-index:4;background:#2b1116;border:1px solid #743540;color:#ffd7dc;border-radius:10px;padding:10px 12px;display:none}.error.show{display:block}@media(max-width:900px){.app{grid-template-columns:1fr}.drawer{height:38vh;border-left:0;border-top:1px solid var(--line)}.world{height:62vh}}
+</style>
 </head>
 <body>
-<div class="shell">
-  <div class="topbar">
-    <div class="brand"><h1>INSPIRE Company OS</h1><p>Real agent states, messages and AI output — visualized as a live 2D office.</p></div>
-    <div class="stats" id="stats"></div>
-  </div>
-
-  <div class="grid">
-    <section class="panel"><div class="panel-head"><h2>2D Office</h2><span id="serverTime">—</span></div><div class="office"><div class="office-grid" id="agents"></div></div></section>
-    <div class="side">
-      <section class="panel"><div class="panel-head"><h2>Live Activity</h2><span><i class="pulse"></i><span id="pollState">adaptive</span></span></div><div class="scroll" id="feed"></div></section>
-      <section class="panel"><div class="panel-head"><h2>Founder Inbox</h2><span id="inboxCount">0 items</span></div><div class="scroll" id="inbox"></div></section>
-    </div>
-  </div>
-
-  <div class="lower">
-    <section class="panel"><div class="panel-head"><h2>Shared Tasks</h2><span>task state drives agent state</span></div><div class="scroll" id="tasks"></div><form class="form" id="taskForm"><div class="form-row"><input id="taskTitle" placeholder="Task title" required><select id="taskOwner"></select></div><div class="form-row"><select id="taskPriority"><option>normal</option><option>high</option><option>critical</option><option>low</option></select><label class="muted"><input style="width:auto" type="checkbox" id="taskApproval"> Founder approval required</label></div><textarea id="taskDescription" placeholder="Description"></textarea><button class="btn primary">Create task</button></form></section>
-    <section class="panel"><div class="panel-head"><h2>Agent Messages</h2><span>real internal message events</span></div><div class="scroll" id="messages"></div><form class="form" id="messageForm"><div class="form-row"><select id="msgSender"></select><select id="msgRecipient"></select></div><input id="msgSubject" placeholder="Subject"><textarea id="msgBody" placeholder="Message" required></textarea><button class="btn primary">Send event</button></form></section>
-    <section class="panel"><div class="panel-head"><h2>Approvals</h2><span>decision only; no external execution</span></div><div class="scroll" id="approvals"></div></section>
-    <section class="panel"><div class="panel-head"><h2>Schedules / Events</h2><span>bounded cron work</span></div><div class="scroll" id="schedules"></div><form class="form" id="scheduleForm"><div class="form-row"><select id="scheduleAgent"></select><select id="scheduleRecurrence"><option value="once">once</option><option value="hourly">hourly</option><option value="daily">daily</option><option value="weekly">weekly</option></select></div><input id="scheduleTitle" placeholder="Schedule title" required><input id="scheduleTime" type="datetime-local" required><textarea id="scheduleInstruction" placeholder="Instruction" required></textarea><button class="btn primary">Schedule event</button></form></section>
-  </div>
+<div class="app">
+  <main class="world">
+    <div class="bar"><div class="mark">*</div><div><b>INSPIRE HQ World</b><span>Company OS /api/bootstrap driven</span></div><div class="poll" id="pollState">loading</div></div>
+    <div class="controls"><button id="zoomOut" aria-label="Zoom out">-</button><button id="reset" aria-label="Reset view">⌂</button><button id="zoomIn" aria-label="Zoom in">+</button></div>
+    <canvas id="worldCanvas" data-testid="hq-world-canvas"></canvas>
+    <div class="legend">Real backend speech bubbles are purple. Ambient motion is local only.</div>
+    <div class="error" id="errorBox"></div>
+  </main>
+  <aside class="drawer">
+    <div class="section"><h1>Control Room</h1><div class="muted">Read-only visualization shell. Existing backend remains source of truth.</div></div>
+    <div class="section"><h2>Founder Inbox</h2><div id="inbox"></div></div>
+    <div class="section"><h2>Agents</h2><div id="agents"></div></div>
+    <div class="section"><h2>Latest Events</h2><div id="events"></div></div>
+    <div class="section"><h2>Tasks</h2><div id="tasks"></div></div>
+  </aside>
 </div>
+<script type="module">
+import { AGENT_ROSTER, findPath, normalizeWorldPayload } from '/world-engine.js';
+import { createPixelAgentsRenderer } from '/pixel-agents-native.js';
 
-<div class="modal" id="modal"><div class="modal-card"><div class="modal-head"><strong id="modalTitle">Agent</strong><button class="btn" id="modalClose">Close</button></div><div class="modal-body" id="modalBody"></div></div></div>
-<div class="error" id="errorBox"></div>
+const canvas = document.getElementById('worldCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const pixelRenderer = createPixelAgentsRenderer(canvas);
 
-<script>
-(function(){
-  var state={agents:[],events:[],tasks:[],approvals:[],messages:[],schedules:[],usage:{},founderInbox:{}};
-  var lastFingerprint='';
-  var idleCycles=0;
-  var pollTimer=null;
-  var esc=function(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})};
-  var fmt=function(v){if(!v)return '—';try{var s=String(v);if(!/[zZ]|[+-]\d\d:\d\d$/.test(s))s+='Z';return new Date(s).toLocaleString()}catch(e){return String(v)}};
-  var ageSeconds=function(v){if(!v)return Infinity;var s=String(v);if(!/[zZ]|[+-]\d\d:\d\d$/.test(s))s+='Z';var n=new Date(s).getTime();return Number.isFinite(n)?Math.max(0,(Date.now()-n)/1000):Infinity};
-  function showError(msg){var b=document.getElementById('errorBox');b.textContent=msg;b.classList.add('show');setTimeout(function(){b.classList.remove('show')},4500)}
-  async function api(path,options){var r=await fetch(path,Object.assign({headers:{'content-type':'application/json'}},options||{}));var d=await r.json().catch(function(){return {}});if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}
-  function fingerprint(d){var e=(d.events&&d.events[0])||{},m=(d.messages&&d.messages[0])||{};return [e.id||'',m.id||'',(d.approvals||[]).filter(function(x){return x.status==='pending'}).length,(d.tasks||[]).map(function(x){return x.id+':'+x.status+':'+x.updated_at}).join('|'),(d.agents||[]).map(function(x){return x.id+':'+x.status+':'+x.updated_at}).join('|')].join('~')}
-  function statusPill(s){return '<span class="status '+esc(s)+'"><span class="dot"></span>'+esc(s)+'</span>'}
-  function agentOptions(selected){return state.agents.map(function(a){return '<option value="'+esc(a.id)+'" '+(a.id===selected?'selected':'')+'>'+esc(a.name)+'</option>'}).join('')}
-  function latestAgentEvent(id){for(var i=0;i<state.events.length;i++){var e=state.events[i];if(e.actor_agent_id===id&&['agent_output','message_sent','ai_started','ai_completed','task_assigned','task_status_changed','task_updated'].indexOf(e.event_type)>=0)return e}return null}
-  function officeVoice(a){var e=latestAgentEvent(a.id);var active=['working','thinking','reviewing'].indexOf(a.status)>=0;var recent=e&&ageSeconds(e.ts)<=75;var speaking=!!(recent&&['agent_output','message_sent'].indexOf(e.event_type)>=0);if(a.status==='thinking')return {text:a.status_reason||'Thinking through the current instruction…',label:'working now',speaking:false,active:true,time:a.updated_at};if(speaking)return {text:e.summary,label:e.event_type==='message_sent'?'speaking to team':'AI output',speaking:true,active:true,time:e.ts};if(active)return {text:a.status_reason||'Working on the current task…',label:a.status, speaking:false,active:true,time:a.updated_at};if(e)return {text:e.summary,label:'latest real event',speaking:false,active:false,time:e.ts};return {text:a.status_reason||'Waiting for the next event.',label:a.status||'waiting',speaking:false,active:false,time:a.updated_at}}
-  function avatar(){return '<div class="avatar-wrap"><div class="avatar"><div class="hair"></div><div class="head"></div><i class="eye l"></i><i class="eye r"></i><i class="mouth"></i><div class="body2d"></div><div class="screen2d"></div><div class="desk"></div></div></div>'}
-  function renderStats(){var active=state.agents.filter(function(a){return ['working','thinking','reviewing'].indexOf(a.status)>=0}).length;var speaking=state.agents.filter(function(a){return officeVoice(a).speaking}).length;var pending=state.approvals.filter(function(a){return a.status==='pending'}).length;var u=state.usage||{};document.getElementById('stats').innerHTML='<div class="stat"><b>'+active+'</b><span>working</span></div><div class="stat"><b>'+speaking+'</b><span>speaking now</span></div><div class="stat"><b>'+pending+'</b><span>approvals</span></div><div class="stat"><b>'+Number(u.requests||0)+'</b><span>AI requests UTC</span></div>'}
-  function renderAgents(){var el=document.getElementById('agents');el.innerHTML=state.agents.length?state.agents.map(function(a){var v=officeVoice(a),classes='agent '+(v.active?'active ':'')+(v.speaking?'speaking ':'');return '<article class="'+classes+'"><div class="agent-top"><div><h3>'+esc(a.name)+'</h3><div class="dept">'+esc(a.department)+'</div></div>'+statusPill(a.status)+'</div><div class="scene">'+avatar()+'<div class="bubble '+(v.active||v.speaking?'':'quiet')+'"><div class="bubble-label"><span>'+(v.speaking?'<i class="live-dot"></i>':'')+esc(v.label)+'</span><span>'+esc(fmt(v.time))+'</span></div><div class="bubble-text">'+esc(v.text)+'</div></div></div><div class="agent-foot"><div class="reason">'+esc(a.status_reason||'No backend event yet.')+'</div><div class="actions"><button class="btn primary" data-run="'+esc(a.id)+'">Run</button><button class="btn" data-detail="'+esc(a.id)+'">Activity</button></div></div></article>'}).join(''):'<div class="empty">No agents registered.</div>'}
-  function renderFeed(){var el=document.getElementById('feed');el.innerHTML=state.events.length?state.events.map(function(e){return '<div class="feed-item"><div class="feed-type">'+esc(e.event_type)+'</div><div>'+esc(e.summary)+'</div><div class="meta">'+esc(e.actor_name||'system')+' · '+fmt(e.ts)+'</div></div>'}).join(''):'<div class="empty">No activity events yet.</div>'}
-  function renderInbox(){var i=state.founderInbox||{},items=[];(i.approvals||[]).forEach(function(x){items.push('<div class="inbox-item"><span class="badge">approval</span><div class="task-title">'+esc(x.title)+'</div><div>'+esc(x.rationale||'No rationale provided')+'</div><div class="meta">'+esc(x.agent_name||'system')+' · '+fmt(x.created_at)+'</div></div>')});(i.blockedTasks||[]).forEach(function(x){items.push('<div class="inbox-item"><span class="badge">blocked</span><div class="task-title">'+esc(x.title)+'</div><div class="meta">'+esc(x.owner_name||'unassigned')+' · '+fmt(x.updated_at)+'</div></div>')});(i.unreadFounderMessages||[]).forEach(function(x){items.push('<div class="inbox-item"><span class="badge">message</span><div class="task-title">'+esc(x.subject||'Agent message')+'</div><div>'+esc(x.body)+'</div><div class="meta">'+esc(x.sender_name||x.sender_agent_id)+' · '+fmt(x.created_at)+'</div><div class="actions" style="margin-top:8px"><button class="btn" data-read="'+x.id+'">Mark read</button></div></div>')});(i.aiAlerts||[]).forEach(function(x){items.push('<div class="inbox-item"><span class="badge">AI alert</span><div class="task-title">'+esc(x.summary)+'</div><div class="meta">'+fmt(x.ts)+'</div></div>')});document.getElementById('inbox').innerHTML=items.length?items.join(''):'<div class="empty">Founder Inbox clear.</div>';document.getElementById('inboxCount').textContent=items.length+' items'}
-  function renderTasks(){var el=document.getElementById('tasks');el.innerHTML=state.tasks.length?state.tasks.map(function(t){return '<div class="row"><div class="task-line"><div><div class="task-title">'+esc(t.title)+'</div><div class="meta">'+esc(t.owner_name||'Unassigned')+' · '+esc(t.priority)+(t.approval_required?' · approval-gated':'')+'</div></div><select data-task="'+t.id+'"><option '+(t.status==='todo'?'selected':'')+'>todo</option><option value="in_progress" '+(t.status==='in_progress'?'selected':'')+'>in_progress</option><option '+(t.status==='blocked'?'selected':'')+'>blocked</option><option '+(t.status==='review'?'selected':'')+'>review</option><option '+(t.status==='done'?'selected':'')+'>done</option></select></div></div>'}).join(''):'<div class="empty">No shared tasks.</div>'}
-  function renderMessages(){var el=document.getElementById('messages');el.innerHTML=state.messages.length?state.messages.map(function(m){return '<div class="row"><div class="msg-title">'+esc(m.sender_name)+' → '+esc(m.recipient_name)+'</div><div>'+esc(m.subject||m.body)+'</div><div class="meta">'+fmt(m.created_at)+' · '+esc(m.status)+'</div></div>'}).join(''):'<div class="empty">No agent messages.</div>'}
-  function renderApprovals(){var el=document.getElementById('approvals');el.innerHTML=state.approvals.length?state.approvals.map(function(a){var b=a.status==='pending'?'<div class="actions" style="margin-top:8px"><button class="btn good" data-approval="'+a.id+'" data-decision="approved">Approve</button><button class="btn bad" data-approval="'+a.id+'" data-decision="rejected">Reject</button></div>':'';return '<div class="row"><div class="task-title">'+esc(a.title)+'</div><div class="meta">'+esc(a.agent_name||'system')+' · '+esc(a.action_type)+' · '+esc(a.status)+'</div>'+b+'</div>'}).join(''):'<div class="empty">No approvals.</div>'}
-  function renderSchedules(){var el=document.getElementById('schedules');el.innerHTML=state.schedules.length?state.schedules.map(function(s){return '<div class="row"><div class="task-title">'+esc(s.title)+'</div><div class="meta">'+esc(s.agent_name)+' · '+esc(s.recurrence)+' · next '+fmt(s.next_run_at)+' · '+(s.enabled?'enabled':'disabled')+'</div></div>'}).join(''):'<div class="empty">No schedules.</div>'}
-  function hydrateSelects(){['taskOwner','msgSender','msgRecipient','scheduleAgent'].forEach(function(id){var el=document.getElementById(id),cur=el.value;el.innerHTML=(id==='taskOwner'?'<option value="">Unassigned</option>':'')+agentOptions(cur)});if(!document.getElementById('msgSender').value)document.getElementById('msgSender').value='admin';if(!document.getElementById('msgRecipient').value)document.getElementById('msgRecipient').value='research'}
-  function render(){renderStats();renderAgents();renderFeed();renderInbox();renderTasks();renderMessages();renderApprovals();renderSchedules();hydrateSelects();document.getElementById('serverTime').textContent='server '+new Date(state.serverTime).toLocaleTimeString()}
-  async function load(){try{var next=await api('/api/bootstrap'),fp=fingerprint(next),changed=fp!==lastFingerprint;state=next;lastFingerprint=fp;idleCycles=changed?0:idleCycles+1;render();return changed}catch(e){showError(e.message);idleCycles=Math.min(idleCycles+2,20);return false}}
-  function nextDelay(){if(document.hidden)return 60000;if(idleCycles>=10)return 30000;if(idleCycles>=3)return 15000;return 8000}
-  async function poll(){await load();var ms=nextDelay();document.getElementById('pollState').textContent=(ms/1000)+'s';clearTimeout(pollTimer);pollTimer=setTimeout(poll,ms)}
-  async function runAgent(id){var instruction=window.prompt('Instruction for '+id);if(!instruction)return;try{await api('/api/agents/'+encodeURIComponent(id)+'/run',{method:'POST',body:JSON.stringify({instruction:instruction})});await load()}catch(e){showError(e.message);await load()}}
-  async function detail(id){try{var d=await api('/api/agents/'+encodeURIComponent(id));document.getElementById('modalTitle').textContent=d.agent.name+' · '+d.agent.status;document.getElementById('modalBody').innerHTML='<p>'+esc(d.agent.role_prompt)+'</p><h3>Recent activity</h3>'+(d.events.length?d.events.map(function(e){return '<div class="row"><b>'+esc(e.event_type)+'</b><div>'+esc(e.summary)+'</div><div class="meta">'+fmt(e.ts)+'</div></div>'}).join(''):'<div class="empty">No events.</div>')+'<h3>Tasks</h3>'+(d.tasks.length?d.tasks.map(function(t){return '<div class="row">'+esc(t.title)+' · '+esc(t.status)+'</div>'}).join(''):'<div class="empty">No tasks.</div>');document.getElementById('modal').classList.add('open')}catch(e){showError(e.message)}}
-  document.addEventListener('click',function(e){var run=e.target.closest('[data-run]');if(run)runAgent(run.getAttribute('data-run'));var det=e.target.closest('[data-detail]');if(det)detail(det.getAttribute('data-detail'));var ap=e.target.closest('[data-approval]');if(ap)api('/api/approvals/'+ap.getAttribute('data-approval'),{method:'PATCH',body:JSON.stringify({status:ap.getAttribute('data-decision')})}).then(load).catch(function(err){showError(err.message)});var read=e.target.closest('[data-read]');if(read)api('/api/messages/'+read.getAttribute('data-read')+'/read',{method:'PATCH',body:'{}'}).then(load).catch(function(err){showError(err.message)})})
-  document.addEventListener('change',function(e){if(e.target.matches('[data-task]'))api('/api/tasks/'+e.target.getAttribute('data-task'),{method:'PATCH',body:JSON.stringify({status:e.target.value})}).then(load).catch(function(err){showError(err.message)})})
-  document.getElementById('modalClose').onclick=function(){document.getElementById('modal').classList.remove('open')};document.getElementById('modal').onclick=function(e){if(e.target===this)this.classList.remove('open')};
-  document.getElementById('messageForm').onsubmit=async function(e){e.preventDefault();try{await api('/api/messages',{method:'POST',body:JSON.stringify({sender_agent_id:document.getElementById('msgSender').value,recipient_agent_id:document.getElementById('msgRecipient').value,subject:document.getElementById('msgSubject').value,body:document.getElementById('msgBody').value})});document.getElementById('msgSubject').value='';document.getElementById('msgBody').value='';await load()}catch(err){showError(err.message)}};
-  document.getElementById('taskForm').onsubmit=async function(e){e.preventDefault();try{await api('/api/tasks',{method:'POST',body:JSON.stringify({title:document.getElementById('taskTitle').value,description:document.getElementById('taskDescription').value,owner_agent_id:document.getElementById('taskOwner').value,created_by_agent_id:'admin',priority:document.getElementById('taskPriority').value,approval_required:document.getElementById('taskApproval').checked})});this.reset();await load()}catch(err){showError(err.message)}};
-  document.getElementById('scheduleForm').onsubmit=async function(e){e.preventDefault();try{var t=new Date(document.getElementById('scheduleTime').value);await api('/api/schedules',{method:'POST',body:JSON.stringify({agent_id:document.getElementById('scheduleAgent').value,title:document.getElementById('scheduleTitle').value,instruction:document.getElementById('scheduleInstruction').value,recurrence:document.getElementById('scheduleRecurrence').value,next_run_at:t.toISOString()})});this.reset();await load()}catch(err){showError(err.message)}};
-  document.addEventListener('visibilitychange',function(){if(!document.hidden){idleCycles=0;clearTimeout(pollTimer);poll()}});
-  poll();
-})();
+const TILE = 32;
+const COLS = 25;
+const ROWS = 17;
+const WALLS = new Set(['9,6','10,6','11,6','12,6','13,6','14,6','15,6','9,10','10,10','14,10','15,10']);
+const state = { world: normalizeWorldPayload({}), characters: new Map(), zoom: 1, panX: 0, panY: 0, idleCycles: 0, lastFingerprint: '' };
+
+function isWalkable(x, y) { return x >= 1 && y >= 1 && x < COLS - 1 && y < ROWS - 1 && !WALLS.has(x + ',' + y); }
+function center(tile) { return { x: tile[0] * TILE + TILE / 2, y: tile[1] * TILE + TILE / 2 }; }
+function now() { return performance.now() / 1000; }
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fingerprint(data) { return JSON.stringify([(data.agents || []).map(a => [a.id,a.status,a.updated_at]), (data.events || [])[0]?.id, (data.tasks || []).map(t => [t.id,t.status,t.updated_at])]); }
+
+function ensureCharacter(agent) {
+  let ch = state.characters.get(agent.id);
+  if (ch) return ch;
+  const spawn = center(AGENT_ROSTER[agent.id].lounge);
+  ch = { id: agent.id, x: spawn.x, y: spawn.y, tile: AGENT_ROSTER[agent.id].lounge, path: [], frame: 0, mode: 'idle', bubbleUntil: 0, bubbleText: '' };
+  state.characters.set(agent.id, ch);
+  return ch;
+}
+
+function destination(agent) {
+  if (agent.behavior.destination === 'offsite') return [-4, AGENT_ROSTER[agent.id].desk[1]];
+  return AGENT_ROSTER[agent.id][agent.behavior.destination] || AGENT_ROSTER[agent.id].desk;
+}
+
+function syncCharacters() {
+  const ids = new Set();
+  for (const agent of state.world.agents) {
+    ids.add(agent.id);
+    const ch = ensureCharacter(agent);
+    ch.mode = agent.behavior.animation;
+    if (agent.speech) {
+      ch.bubbleText = agent.speech.text;
+      ch.bubbleKind = 'REAL EVENT';
+      ch.bubbleUntil = now() + 7;
+      ch.mode = 'talk';
+    } else if (agent.status === 'waiting') {
+      ch.bubbleText = 'idle';
+      ch.bubbleKind = 'IDLE';
+      ch.bubbleUntil = 0;
+    }
+    const target = destination(agent);
+    if (ch.targetKey !== target.join(',')) {
+      ch.targetKey = target.join(',');
+      ch.path = findPath(ch.tile, target, isWalkable);
+      if (!ch.path.length && isWalkable(target[0], target[1])) ch.path = [target];
+    }
+  }
+  for (const id of state.characters.keys()) if (!ids.has(id)) state.characters.delete(id);
+}
+
+function update(dt) {
+  for (const ch of state.characters.values()) {
+    ch.frame += dt;
+    if (!ch.path.length) continue;
+    const next = center(ch.path[0]);
+    const dx = next.x - ch.x;
+    const dy = next.y - ch.y;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.min(dist, dt * 84);
+    if (dist <= 1) {
+      ch.tile = ch.path.shift();
+      ch.x = next.x;
+      ch.y = next.y;
+    } else {
+      ch.x += dx / dist * step;
+      ch.y += dy / dist * step;
+      ch.mode = 'walk';
+    }
+  }
+}
+
+function drawRoom(x, y, w, h, label, accent = '#b54cff') {
+  ctx.fillStyle = '#151719'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,.035)'; ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+  ctx.fillStyle = 'rgba(118,86,58,.55)'; ctx.fillRect(x + 12, y + h - 24, w - 24, 12);
+  ctx.strokeStyle = '#554a40'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(181,76,255,.45)'; ctx.beginPath(); ctx.moveTo(x + 10, y + 28); ctx.lineTo(x + w - 10, y + 28); ctx.stroke();
+  ctx.fillStyle = accent; ctx.fillRect(x + 10, y + 10, 18, 4);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '10px ui-monospace, monospace'; ctx.fillText(label, x + 10, y + 23);
+}
+
+function drawPlant(x, y, size = 1) {
+  ctx.fillStyle = '#5c432f'; ctx.fillRect(x - 5 * size, y + 10 * size, 10 * size, 12 * size);
+  ctx.fillStyle = '#2f6b46';
+  ctx.beginPath(); ctx.ellipse(x - 8 * size, y + 3 * size, 8 * size, 15 * size, -.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 7 * size, y + 2 * size, 8 * size, 16 * size, .55, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, y - 6 * size, 9 * size, 19 * size, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawDesk(x, y, w = 52) {
+  ctx.fillStyle = '#8a603d'; ctx.fillRect(x, y, w, 9);
+  ctx.fillStyle = '#332922'; ctx.fillRect(x + 4, y + 9, 5, 20); ctx.fillRect(x + w - 9, y + 9, 5, 20);
+  ctx.fillStyle = '#d7c7af'; ctx.fillRect(x + 11, y - 7, 20, 7);
+}
+
+function render() {
+  const dpr = devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+  }
+  ctx.setTransform(dpr * state.zoom, 0, 0, dpr * state.zoom, dpr * state.panX, dpr * state.panY);
+  ctx.clearRect(-state.panX / state.zoom, -state.panY / state.zoom, canvas.width, canvas.height);
+  pixelRenderer.render({ characters: state.characters, roster: AGENT_ROSTER, now });
+  return;
+/*
+  ctx.fillStyle = 'rgba(245,184,105,.12)'; ctx.beginPath(); ctx.ellipse(13 * TILE, 8 * TILE, 190, 110, 0, 0, Math.PI * 2); ctx.fill();
+  drawRoom(2 * TILE, 1 * TILE, 6 * TILE, 4 * TILE, 'FOUNDER', '#b54cff');
+  drawRoom(2 * TILE, 6 * TILE, 7 * TILE, 4 * TILE, 'RESEARCH', '#9f79ff');
+  drawRoom(2 * TILE, 11 * TILE, 7 * TILE, 4 * TILE, 'MARKETING', '#c96cff');
+  drawRoom(17 * TILE, 6 * TILE, 6 * TILE, 4 * TILE, 'ADMIN', '#7bb7ff');
+  drawRoom(17 * TILE, 11 * TILE, 6 * TILE, 4 * TILE, 'FINANCE', '#d9a35f');
+  drawRoom(10 * TILE, 1 * TILE, 6 * TILE, 3 * TILE, 'CAFE', '#d9a35f');
+  drawRoom(18 * TILE, 14 * TILE, 5 * TILE, 2 * TILE, 'RECEPTION', '#b54cff');
+  ctx.fillStyle = '#2a2421'; ctx.fillRect(21 * TILE, 14 * TILE + 30, 46, 36);
+  ctx.fillStyle = '#51483f'; ctx.fillRect(21 * TILE + 7, 14 * TILE + 36, 12, 24); ctx.fillRect(21 * TILE + 27, 14 * TILE + 36, 12, 24);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '9px ui-monospace, monospace'; ctx.fillText('ELEVATORS', 21 * TILE - 3, 14 * TILE + 26);
+  ctx.fillStyle = '#261f27'; ctx.fillRect(10 * TILE, 6 * TILE, 6 * TILE, 5 * TILE);
+  ctx.strokeStyle = 'rgba(181,76,255,.5)'; ctx.strokeRect(10 * TILE, 6 * TILE, 6 * TILE, 5 * TILE);
+  ctx.fillStyle = '#6f563d'; ctx.fillRect(11 * TILE, 12 * TILE, 4 * TILE, 28);
+  ctx.fillStyle = '#2d6b45'; ctx.beginPath(); ctx.arc(13 * TILE, 8 * TILE, 42, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#43915e'; ctx.beginPath(); ctx.arc(12 * TILE + 18, 8 * TILE - 12, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6f4a30'; ctx.fillRect(13 * TILE - 5, 8 * TILE + 25, 10, 52);
+  ctx.fillStyle = '#d8cabc'; ctx.font = '10px ui-monospace, monospace'; ctx.fillText('ATRIUM', 12 * TILE + 22, 7 * TILE - 24);
+  drawDesk(3 * TILE + 18, 3 * TILE + 10); drawDesk(3 * TILE + 22, 8 * TILE + 18); drawDesk(3 * TILE + 20, 13 * TILE + 10);
+  drawDesk(18 * TILE + 10, 8 * TILE + 18); drawDesk(18 * TILE + 12, 13 * TILE + 10);
+  drawPlant(8 * TILE, 5 * TILE, .9); drawPlant(16 * TILE, 5 * TILE, .9); drawPlant(9 * TILE, 13 * TILE, .8); drawPlant(17 * TILE, 12 * TILE, .8);
+  ctx.fillStyle = '#b54cff'; ctx.font = 'bold 12px ui-sans-serif'; ctx.fillText('INSPIRE HQ CANVAS WORLD', 10 * TILE + 12, 6 * TILE + 20);
+  const chars = [...state.characters.values()].sort((a, b) => a.y - b.y);
+  for (const ch of chars) drawCharacter(ch);
+*/
+}
+
+function drawCharacter(ch) {
+  const roster = AGENT_ROSTER[ch.id];
+  if (!roster) return;
+  const bob = ch.mode === 'type' || ch.mode === 'read' || ch.mode === 'talk' ? Math.sin(ch.frame * 8) * 2 : 0;
+  ctx.save();
+  ctx.translate(ch.x, ch.y + bob);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(0, 17, 13, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = roster.color; ctx.fillRect(-10, -4, 20, 24);
+  ctx.fillStyle = '#d4a07c'; ctx.fillRect(-8, -24, 16, 16);
+  ctx.fillStyle = '#171319'; ctx.fillRect(-9, -28, 18, 8);
+  ctx.fillStyle = '#111'; ctx.fillRect(-4, -18, 2, 2); ctx.fillRect(4, -18, 2, 2);
+  ctx.fillStyle = '#733840';
+  const mouth = ch.mode === 'talk' ? 2 + Math.abs(Math.sin(ch.frame * 14)) * 4 : 2;
+  ctx.fillRect(-3, -12, 6, mouth);
+  if (ch.mode === 'type') { ctx.fillStyle = '#d9dee8'; ctx.fillRect(-14, 16, 28, 4); }
+  if (ch.mode === 'read') { ctx.strokeStyle = '#d9dee8'; ctx.strokeRect(-13, 10, 26, 13); }
+  ctx.restore();
+  ctx.fillStyle = '#0d1118'; ctx.strokeStyle = ch.mode === 'talk' ? '#b54cff' : '#343b48';
+  ctx.lineWidth = 1; roundRect(ch.x - 42, ch.y - 62, 84, 24, 5, true, true);
+  ctx.fillStyle = '#f4f6fb'; ctx.font = 'bold 10px ui-sans-serif'; ctx.fillText(roster.label, ch.x - 34, ch.y - 47);
+  if (ch.bubbleUntil > now()) drawBubble(ch, ch.bubbleKind, ch.bubbleText);
+}
+
+function drawBubble(ch, kind, text) {
+  const x = ch.x + 20, y = ch.y - 88, w = 190, h = 42;
+  ctx.fillStyle = '#f8f6fb'; ctx.strokeStyle = kind === 'REAL EVENT' ? '#b54cff' : '#9aa3b2';
+  roundRect(x, y, w, h, 8, true, true);
+  ctx.fillStyle = '#76528e'; ctx.font = 'bold 8px ui-monospace, monospace'; ctx.fillText(kind, x + 8, y + 13);
+  ctx.fillStyle = '#161b24'; ctx.font = '10px ui-sans-serif'; wrapText(text, x + 8, y + 27, w - 16, 12);
+}
+
+function roundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  if (fill) ctx.fill(); if (stroke) ctx.stroke();
+}
+
+function wrapText(text, x, y, maxWidth, lineHeight) {
+  const words = String(text || '').split(/\s+/);
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y); line = word; y += lineHeight; }
+    else line = test;
+  }
+  ctx.fillText(line, x, y);
+}
+
+function renderPanel() {
+  const inbox = state.world.founderInbox?.unreadFounderMessages || [];
+  document.getElementById('inbox').innerHTML = inbox.length
+    ? inbox.map((m) => '<div class="row"><b>' + esc(m.subject || 'Message') + '</b><div class="muted">' + esc(m.sender_name || m.sender_agent_id || 'agent') + '</div><button class="pill" data-read="' + esc(m.id) + '">Mark read</button></div>').join('')
+    : '<div class="row muted">Founder Inbox clear.</div>';
+  document.getElementById('agents').innerHTML = state.world.agents.map((a) => '<div class="row agent ' + esc(a.status) + '"><div><span class="dot"></span><b>' + esc(a.label) + '</b><div class="muted">' + esc(a.statusReason || a.role) + '</div></div><span class="pill">' + esc(a.status) + '</span></div>').join('');
+  document.getElementById('events').innerHTML = state.world.events.slice(0, 8).map((e) => '<div class="row event"><b>' + esc(e.event_type) + '</b><div>' + esc(e.summary) + '</div><div class="muted">' + esc(e.actor_name || e.actor_agent_id || 'system') + '</div></div>').join('') || '<div class="row muted">No events.</div>';
+  document.getElementById('tasks').innerHTML = state.world.tasks.slice(0, 8).map((t) => '<div class="row"><b>' + esc(t.title) + '</b><div class="muted">' + esc(t.owner_name || t.owner_agent_id || 'unassigned') + ' · ' + esc(t.status) + '</div></div>').join('') || '<div class="row muted">No tasks.</div>';
+}
+
+async function load() {
+  try {
+    const scenario = new URLSearchParams(location.search).get('scenario');
+    const bootstrapPath = scenario ? '/api/bootstrap?scenario=' + encodeURIComponent(scenario) : '/api/bootstrap';
+    const response = await fetch(bootstrapPath, { cache: 'no-store' });
+    const payload = await response.json();
+    const fp = fingerprint(payload);
+    state.idleCycles = fp === state.lastFingerprint ? state.idleCycles + 1 : 0;
+    state.lastFingerprint = fp;
+    state.world = normalizeWorldPayload(payload);
+    syncCharacters();
+    renderPanel();
+  } catch (error) {
+    const box = document.getElementById('errorBox');
+    box.textContent = 'Preview failed to load';
+    box.classList.add('show');
+  }
+}
+
+function nextDelay() {
+  if (document.hidden) return 60000;
+  if (state.idleCycles >= 6) return 30000;
+  if (state.idleCycles >= 2) return 15000;
+  return 8000;
+}
+
+async function poll() {
+  await load();
+  const delay = nextDelay();
+  document.getElementById('pollState').textContent = delay / 1000 + 's poll';
+  setTimeout(poll, delay);
+}
+
+let last = 0;
+function frame(t) {
+  const dt = last ? Math.min((t - last) / 1000, 0.05) : 0;
+  last = t;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+document.getElementById('zoomIn').onclick = () => { state.zoom = Math.min(1.8, state.zoom + 0.1); };
+document.getElementById('zoomOut').onclick = () => { state.zoom = Math.max(0.75, state.zoom - 0.1); };
+document.getElementById('reset').onclick = () => { state.zoom = 1; state.panX = 0; state.panY = 0; };
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-read]');
+  if (!button) return;
+  await fetch('/api/messages/' + encodeURIComponent(button.getAttribute('data-read')) + '/read', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{}' });
+  await load();
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+poll();
+requestAnimationFrame(frame);
 </script>
 </body></html>`;
 }

@@ -1,0 +1,12 @@
+name = "inspire-company-os-preview"
+main = "src/preview-entry.js"
+compatibility_date = "2026-09-17"
+workers_dev = true
+preview_urls = true
+
+[assets]
+directory = "./public"
+
+[vars]
+ENVIRONMENT = "preview"
+AUTH_MODE = "preview-mock"

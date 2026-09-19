@@ -159,7 +159,10 @@ async function approvalGateForTask(request, env, path) {
 async function securedFetch(request, env, ctx) {
   const url = new URL(request.url);
   const auth = await authorizeRequest(request, env);
-  if (!auth.ok) return json({ error: auth.error }, auth.status || 403);
+  if (!auth.ok) {
+    const error = auth.error === 'access_not_configured' ? 'access_not_configured' : auth.error;
+    return json({ error }, auth.status || 403);
+  }
 
   const mutationBlocked = mutationGuard(request);
   if (mutationBlocked) return mutationBlocked;

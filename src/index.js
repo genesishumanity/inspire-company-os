@@ -1,4 +1,5 @@
 import { renderOffice } from './ui.js';
+import { renderWorldEngineModule } from './world-engine.js';
 import { reserveAiRequest } from './ai-budget.js';
 
 const STATUS_VALUES = new Set(['working', 'thinking', 'waiting', 'blocked', 'reviewing', 'sleeping']);
@@ -6,6 +7,13 @@ const TASK_STATUS = new Set(['todo', 'in_progress', 'blocked', 'review', 'done']
 const PRIORITIES = new Set(['low', 'normal', 'high', 'critical']);
 const RECURRENCES = new Set(['once', 'hourly', 'daily', 'weekly']);
 const AGENT_RUN_LEASE_MINUTES = 10;
+
+export function operationalStatusFromCounts({ blocked = 0, review = 0, inProgress = 0 } = {}) {
+  if (blocked > 0) return 'blocked';
+  if (review > 0) return 'reviewing';
+  if (inProgress > 0) return 'working';
+  return 'waiting';
+}
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -25,6 +33,12 @@ function json(data, status = 200) {
 function html(body) {
   return new Response(body, {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
+  });
+}
+
+function js(body) {
+  return new Response(body, {
+    headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
   });
 }
 
@@ -326,6 +340,7 @@ async function route(request, env) {
   const method = request.method.toUpperCase();
 
   if (method === 'GET' && path === '/') return html(renderOffice());
+  if (method === 'GET' && path === '/world-engine.js') return js(renderWorldEngineModule());
   if (method === 'GET' && path === '/health') return json({ ok: true, service: 'inspire-company-os', time: new Date().toISOString() });
   if (method === 'GET' && path === '/api/bootstrap') return json(await bootstrap(env));
   if (method === 'GET' && path === '/api/founder-inbox') return json(await founderInbox(env));
